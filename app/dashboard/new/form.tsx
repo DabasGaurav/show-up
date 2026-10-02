@@ -7,7 +7,7 @@ import { ActivityDetails, type ActivityDetailsData } from "@/components/activity
 import { CauseIcon } from "@/components/cause-icon";
 import { Field, FormError, Segmented, Select, TextArea, TextInput } from "@/components/forms/field";
 import { Button } from "@/components/ui/button";
-import { CAUSES, CITIES, CITY_NAMES, causeColor } from "@/lib/constants";
+import { CAUSES, CITIES, CITY_NAMES, ONLINE, OTHER, causeColor } from "@/lib/constants";
 import { fmtDayDate, fmtDuration, fmtRepeats, fmtTimeRange, istToDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { postActivityAction, type PostState } from "./actions";
@@ -37,7 +37,9 @@ export function PostForm({ defaults }: { defaults: PostDefaults }) {
   const [tab, setTab] = useState<"form" | "preview">("form");
   const [v, setV] = useState<Record<string, string>>({
     title: "", cause: "", role: "", done_definition: "", date: "", start_time: "", end_time: "", repeats: "", times: "4",
-    mode: "onsite", city: defaults.city, address: "", online_link: "",
+    mode: defaults.city === ONLINE ? "online" : "onsite", address: "", online_link: "",
+    city: CITY_NAMES.includes(defaults.city) ? defaults.city : defaults.city === ONLINE ? CITY_NAMES[0] : OTHER,
+    city_other: CITY_NAMES.includes(defaults.city) || defaults.city === ONLINE ? "" : defaults.city,
     lat: String(CITIES[defaults.city]?.lat ?? ""), lng: String(CITIES[defaults.city]?.lng ?? ""),
     people: "5", contact_name: defaults.contactName, contact_phone: defaults.contactPhone,
   });
@@ -62,7 +64,7 @@ export function PostForm({ defaults }: { defaults: PostDefaults }) {
     title: v.title, cause: v.cause, orgName: defaults.orgName, orgChecked: true,
     when: [hasDate ? fmtDayDate(start) : "", hasTimes ? fmtTimeRange(start, end) : ""].filter(Boolean).join(" · "),
     duration: minutes > 0 ? fmtDuration(minutes) : "",
-    online, place: [v.address, online ? "" : v.city].filter(Boolean).join(", "),
+    online, place: [v.address, online ? "" : v.city === OTHER ? v.city_other : v.city].filter(Boolean).join(", "),
     role: v.role, done: v.done_definition, repeats: fmtRepeats(repeats ? Number(v.times) || 0 : 1, start),
     contact: v.contact_name, needed: people, taken: 0,
   };
@@ -139,8 +141,14 @@ export function PostForm({ defaults }: { defaults: PostDefaults }) {
             ) : (
               <>
                 <Field label="City" htmlFor="city" error={err("city")}>
-                  <Select {...bind("city")}>{CITY_NAMES.map((c) => <option key={c}>{c}</option>)}</Select>
+                  <Select {...bind("city")}>
+                    {CITY_NAMES.map((c) => <option key={c}>{c}</option>)}
+                    <option value={OTHER}>Other town or village</option>
+                  </Select>
                 </Field>
+                {v.city === OTHER && (
+                  <Field label="Town or village" htmlFor="city_other"><TextInput {...bind("city_other")} maxLength={60} placeholder="e.g. Shimla" /></Field>
+                )}
                 <Field label="Address" htmlFor="address" error={err("address")} hint="Then tap the map to drop the pin on the exact spot.">
                   <TextInput {...bind("address")} maxLength={160} placeholder="e.g. Community hall, Sector 12" />
                 </Field>

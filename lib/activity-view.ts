@@ -23,7 +23,7 @@ export function detailsOf(a: ActivityWithOrg, d: ActivityDate, confirmed: boolea
     mapUrl: a.mode === "onsite" ? mapLink(a.lat, a.lng, a.address) : undefined,
     onlineLink: confirmed ? a.online_link : null,
     role: a.role, done: a.done_definition, repeats: fmtRepeats(a.occurrences, a.start_at),
-    contact: confirmed ? `${a.contact_name} · ${fmtPhone(a.contact_phone)}` : a.contact_name,
+    contact: confirmed && a.contact_phone ? `${a.contact_name} · ${fmtPhone(a.contact_phone)}` : a.contact_name,
     needed: a.slots_needed, taken: d.taken,
   };
 }

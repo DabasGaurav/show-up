@@ -7,6 +7,9 @@ import { query } from "@/lib/db";
 import { runJobs } from "@/lib/jobs";
 import { HOUR_MS, DAY_MS, showUpRate, trackRecord } from "@/lib/rules";
 import { finishSignIn, hasAccount, startSignIn } from "@/lib/signin";
+import fs from "node:fs";
+import { importListings, type Listings } from "@/lib/import-listings";
+import { sendEmail } from "@/lib/notify";
 import { seed, seedAllowed } from "@/supabase/seed";
 
 const ORIGIN = "https://test.local";
@@ -250,5 +253,51 @@ describe("sample data", () => {
     expect(seedAllowed()).toBe(false);
     await expect(seed(T0)).rejects.toThrow("local testing only");
     delete process.env.DATABASE_URL;
+  });
+});
+
+describe("launch listings", () => {
+  const data = JSON.parse(fs.readFileSync("data/listings.json", "utf8")) as Listings;
+  const total = (t: { created: number; updated: number; unchanged: number }) => t.created + t.updated + t.unchanged;
+
+  it("a dry run writes nothing, a real run loads everything, a second run changes nothing", async () => {
+    const dry = await importListings(data, { dryRun: true });
+    expect([dry.ngos.created, dry.activities.created, dry.volunteers.created]).toEqual([10, 17, 28]);
+    expect(await query("select 1 from organisations where is_seed")).toHaveLength(0);
+
+    const first = await importListings(data, { dryRun: false });
+    expect([total(first.ngos), total(first.activities), total(first.volunteers)]).toEqual([10, 17, 28]);
+    expect(first.warnings.filter((w) => w.startsWith("NGO name to confirm"))).toHaveLength(4);
+    expect(first.warnings.some((w) => w.includes("CITY TO CONFIRM"))).toBe(true);
+
+    const again = await importListings(data, { dryRun: false });
+    expect(again.changes).toEqual([]);
+    expect([again.ngos.unchanged, again.activities.unchanged, again.volunteers.unchanged, again.spots.unchanged]).toEqual([10, 17, 28, first.spots.created]);
+
+    const now = new Date("2026-10-05T06:00:00Z");
+    const up = await listUpcoming(now);
+    expect(up.filter((a) => a.is_seed)).toHaveLength(16); // the 17th has already happened
+    expect(up.find((a) => a.share_slug === "bh-n1-clean-up")).toMatchObject({ city: "Shimla", org_checked: true });
+    const [weekly] = await query<{ n: number }>("select count(*)::int as n from task_occurrences oc join tasks t on t.id = oc.task_id where t.share_slug = 'make-a-difference-weekly-shelter-class'");
+    expect(weekly.n).toBe(12);
+  });
+
+  it("never emails a .test address or about a launch-listing spot, and leaves those spots out of the admin number", async () => {
+    expect(await sendEmail({ type: "spot_saved", to: "adarsh@showup.test", text: "x" })).toBe("skipped");
+    expect(await sendEmail({ type: "spot_saved", to: "real@test.local", text: "x", seed: true })).toBe("skipped");
+    expect(await query("select 1 from notifications where payload->>'to' like '%@showup.test'")).toHaveLength(0);
+
+    // Timed jobs run over the loaded spots without writing to anyone.
+    const before = (await query("select 1 from notifications")).length;
+    await runJobs(new Date("2026-10-09T06:00:00Z"), ORIGIN, { comeBack: true });
+    expect(await query("select 1 from notifications where payload->>'to' like '%.test'")).toHaveLength(0);
+    expect((await query("select 1 from notifications")).length).toBeGreaterThanOrEqual(before);
+
+    const [{ n }] = await query<{ n: number }>("select count(*)::int as n from bookings where is_seed and status = 'attended'");
+    expect(n).toBe(6);
+    const seedPast = await query("select 1 from bookings b join task_occurrences oc on oc.id = b.occurrence_id where b.is_seed and oc.start_at <= $1", [new Date("2026-10-05T06:00:00Z")]);
+    const counted = await pastStatuses(new Date("2026-10-05T06:00:00Z"));
+    const all = await query("select 1 from bookings b join task_occurrences oc on oc.id = b.occurrence_id where oc.start_at <= $1", [new Date("2026-10-05T06:00:00Z")]);
+    expect(counted.length).toBe(all.length - seedPast.length);
   });
 });

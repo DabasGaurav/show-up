@@ -4,7 +4,7 @@ import { getSpot, orgEmails } from "@/lib/data/bookings";
 import { listUpcoming } from "@/lib/data/tasks";
 import { fmtDayDate, fmtPhone, fmtTime, fmtWeekday, mapLink } from "@/lib/format";
 import { MSG } from "@/lib/messages";
-import { sendEmail } from "@/lib/notify";
+import { isTestAddress, sendEmail } from "@/lib/notify";
 import { DAY_MS, HOUR_MS, morningOf, RULES } from "@/lib/rules";
 
 // The timed emails (spec §3, §4). Safe to run as often as you like: every email
@@ -34,7 +34,7 @@ export async function runJobs(now: Date, origin: string, opts: { comeBack?: bool
   )) {
     const s = (await getSpot(id))!;
     await sendEmail({
-      type: "still_on", to: s.user_email, userId: s.user_id, about: s.title, key: `still_on:${id}`,
+      type: "still_on", seed: s.is_seed, to: s.user_email, userId: s.user_id, about: s.title, key: `still_on:${id}`,
       text: MSG.stillOn({ title: s.title, ngo: s.org_name, day: fmtWeekday(s.start_at), time: fmtTime(s.start_at), link: `${origin}/c/${s.confirm_token}` }),
     });
     report.stillOn++;
@@ -50,7 +50,7 @@ export async function runJobs(now: Date, origin: string, opts: { comeBack?: bool
   )) {
     const s = (await getSpot(id))!;
     await sendEmail({
-      type: "no_reply", to: s.user_email, userId: s.user_id, about: s.title, key: `no_reply:${id}`,
+      type: "no_reply", seed: s.is_seed, to: s.user_email, userId: s.user_id, about: s.title, key: `no_reply:${id}`,
       text: MSG.noReply({ title: s.title, ngo: s.org_name, day: fmtWeekday(s.start_at), time: fmtTime(s.start_at), link: `${origin}/c/${s.confirm_token}` }),
     });
     report.noReply++;
@@ -68,10 +68,10 @@ export async function runJobs(now: Date, origin: string, opts: { comeBack?: bool
     const s = (await getSpot(row.id))!;
     const place = s.mode === "online" ? (s.online_link ?? "online") : `${[s.address, s.city].filter(Boolean).join(", ")} (${mapLink(s.lat, s.lng, s.address)})`;
     await sendEmail({
-      type: "morning_of", to: s.user_email, userId: s.user_id, about: s.title, key: `morning_of:${row.id}`,
+      type: "morning_of", seed: s.is_seed, to: s.user_email, userId: s.user_id, about: s.title, key: `morning_of:${row.id}`,
       text: MSG.morningOf({
         title: s.title, ngo: s.org_name, day: fmtWeekday(s.start_at), time: fmtTime(s.start_at),
-        placeOrLink: place, contact: `${s.contact_name} (${fmtPhone(s.contact_phone)})`, done: s.done_definition,
+        placeOrLink: place, contact: s.contact_phone ? `${s.contact_name} (${fmtPhone(s.contact_phone)})` : s.contact_name, done: s.done_definition,
       }),
     });
     report.morningOf++;
@@ -119,11 +119,12 @@ async function comeBack(now: Date, origin: string): Promise<number> {
       .filter((a) => a.taken < a.slots_needed && (a.mode === "online" || !p.city || a.city === p.city))
       .slice(0, RULES.comeBackActivities);
     if (picks.length < RULES.comeBackActivities) continue;
+    if (isTestAddress(p.email)) continue;
     const list = picks.map((a) => `• ${a.title}, ${fmtDayDate(a.date_start)} at ${fmtTime(a.date_start)}: ${origin}/a/${a.share_slug}`).join("\n");
     const res = await sendEmail({
       type: "come_back", to: p.email, userId: p.id, key: `come_back:${p.id}:${now.toISOString().slice(0, 10)}`, text: MSG.comeBack({ list }),
     });
-    if (res !== "duplicate") sent++;
+    if (res !== "duplicate" && res !== "skipped") sent++;
   }
   return sent;
 }

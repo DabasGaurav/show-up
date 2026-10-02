@@ -28,6 +28,14 @@ export const CITIES: Record<string, { lat: number; lng: number }> = {
 };
 export const CITY_NAMES = Object.keys(CITIES);
 
+/** The "Other town or village" choice. The town the person types is what gets stored and shown. */
+export const OTHER = "Other";
+/** A town or village beyond the listed cities, e.g. "Shimla" or "Villages, Maharashtra". */
+export const isOtherPlace = (city: string) => city !== ONLINE && !CITY_NAMES.includes(city);
+
+/** How a choice is written in the address bar: "Trees & green" → "trees-green". */
+export const urlSlug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
 export const REASONS = ["work", "health", "travel", "other"] as const;
 export type Reason = (typeof REASONS)[number];
 export const REASON_LABEL: Record<Reason, string> = {
@@ -43,3 +51,5 @@ export const REASON_PHRASE: Record<Reason, string> = {
   travel: "travelling",
   other: "something came up",
 };
+
+export const HEARD_FROM = ["Friend", "Our team called", "WhatsApp", "Instagram", "LinkedIn", "Other"] as const;

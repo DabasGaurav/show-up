@@ -34,7 +34,7 @@ function One({ p, className }: { p: P; className?: string }) {
 
 // One volunteer per cause: the seven causes cover everything on Show-Up, and no
 // activity sits in two of them. The order matches the Cause filter.
-const BY_CAUSE: { cause: string; p: Omit<P, "bg"> }[] = [
+export const BY_CAUSE: { cause: string; p: Omit<P, "bg"> }[] = [
   { cause: "Teaching", p: { body: "Explaining", hair: "Long", face: "SmileLol", accessory: "GlassRound" } },
   { cause: "Food", p: { body: "Coffee", hair: "Hijab", face: "Cute" } },
   { cause: "Trees & green", p: { body: "PointingUp", hair: "Bun", face: "SmileBig" } },
@@ -44,25 +44,29 @@ const BY_CAUSE: { cause: string; p: Omit<P, "bg"> }[] = [
   { cause: "Skills", p: { body: "Device", hair: "Short", face: "Driven", accessory: "GlassRoundThick" } },
 ];
 
-/** Hero: one volunteer for each cause. With `links`, each one opens that cause's activities. */
-export function HeroPeeps({ className, links = false }: { className?: string; links?: boolean }) {
+/**
+ * Hero: one volunteer for each cause. With `hrefFor`, each picture is a link that
+ * selects that cause (the same choice as the Cause filter chips); `selected` ones are ringed.
+ */
+export function HeroPeeps({ className, hrefFor, selected = [] }: { className?: string; hrefFor?: (cause: string) => string; selected?: string[] }) {
   return (
-    <ul className={cn("flex flex-wrap justify-center gap-x-3 gap-y-4", className)} aria-label="Ways to help">
+    <ul className={cn("flex gap-x-3 gap-y-4", className)} aria-label="Ways to help">
       {BY_CAUSE.map(({ cause, p }) => {
+        const sel = selected.includes(cause);
         const tile = (
           <>
-            <span className="relative block">
+            <span className={cn("relative block rounded-full", sel && "ring-4 ring-primary ring-offset-2 ring-offset-background")}>
               <One p={{ ...p, bg: causeColor(cause) }} className="aspect-square w-full" />
-              <span className="absolute -right-1 -bottom-1 flex size-8 items-center justify-center rounded-full bg-card text-primary shadow-card">
+              <span className={cn("absolute -right-1 -bottom-1 flex size-8 items-center justify-center rounded-full shadow-card", sel ? "bg-primary text-white" : "bg-card text-primary")}>
                 <CauseIcon cause={cause} className="size-4" />
               </span>
             </span>
-            <span className="mt-2 block text-center text-sm leading-5 font-semibold">{cause}</span>
+            <span className={cn("mt-2 block text-center text-sm leading-5 font-semibold", sel && "text-primary")}>{cause}</span>
           </>
         );
         return (
-          <li key={cause} className="w-[22%]">
-            {links ? <Link href={`/?cause=${encodeURIComponent(cause)}`} className="block rounded-xl hover:text-primary">{tile}</Link> : tile}
+          <li key={cause} className="w-[4.5rem] shrink-0 sm:w-[22%]">
+            {hrefFor ? <Link href={hrefFor(cause)} aria-current={sel ? "true" : undefined} className="block rounded-xl hover:text-primary">{tile}</Link> : tile}
           </li>
         );
       })}

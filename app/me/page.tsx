@@ -7,6 +7,7 @@ import { Pill, TrackDots } from "@/components/kit";
 import { Header } from "@/components/site-header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
+import { REASON_PHRASE } from "@/lib/constants";
 import { listSpotsForUser, type Spot } from "@/lib/data/bookings";
 import { fmtDayTime, fmtPhone, mapLink } from "@/lib/format";
 import { volunteerPill } from "@/lib/labels";
@@ -36,8 +37,7 @@ function Upcoming({ s, now }: { s: Spot; now: Date }) {
           {confirmed && (
             <p className="text-sm">
               <span className="text-ink-soft">Ask for </span>{s.contact_name} ·{" "}
-              <a href={`tel:${s.contact_phone}`} className="font-medium text-primary underline underline-offset-2">{fmtPhone(s.contact_phone)}</a>
-              {" · "}
+              {s.contact_phone && <><a href={`tel:${s.contact_phone}`} className="font-medium text-primary underline underline-offset-2">{fmtPhone(s.contact_phone)}</a>{" · "}</>}
               {s.mode === "online"
                 ? <a href={s.online_link ?? "#"} className="font-medium break-all text-primary underline underline-offset-2">Open the link</a>
                 : <a href={mapLink(s.lat, s.lng, s.address)} target="_blank" rel="noreferrer" className="font-medium text-primary underline underline-offset-2">Open in Maps</a>}
@@ -94,7 +94,7 @@ export default async function MyPlans() {
           <ul className="mt-3 space-y-3">
             {upcoming.map((s) => (
               <li key={s.id}>
-                {ACTIVE.includes(s.status) ? <Upcoming s={s} now={at} /> : <ActivityCard a={cardOf(s)} href={`/a/${s.share_slug}`} right={<Pill tone="grey">Freed</Pill>} />}
+                {ACTIVE.includes(s.status) ? <Upcoming s={s} now={at} /> : <ActivityCard a={cardOf(s)} href={`/a/${s.share_slug}`} right={<Pill tone="grey">{s.release_reason ? `Freed (${REASON_PHRASE[s.release_reason].replace(/^./, (c) => c.toUpperCase())})` : "Freed"}</Pill>} />}
               </li>
             ))}
           </ul>

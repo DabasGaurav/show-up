@@ -14,6 +14,11 @@ const MESSAGES: Record<string, string> = {
   yes: "Lovely. See you there.",
   freed: "Done. Your spot is open for someone else.",
   sent: "Thanks! We'll call you within a day.",
+  waitlist: "Done. We'll email you when something's on.",
+  bademail: "That email doesn't look right.",
+  saved: "Saved.",
+  deleted: "Deleted.",
+  noowner: "That NGO has no coordinator account to open.",
 };
 
 export function toast(message: string) {

@@ -15,6 +15,9 @@ export interface Org {
   about: string | null;
   contact_name: string | null;
   contact_phone: string | null;
+  whatsapp_phone: string | null;
+  heard_from: string | null;
+  is_seed: boolean;
   status: "pending" | "approved" | "rejected";
   created_at: Date;
 }
@@ -40,17 +43,23 @@ export interface NewOrg {
   causes: string[];
   contactName: string;
   contactRole: string;
-  contactPhone: string;
+  contactPhone: string | null;
   registrationNo: string | null;
   about: string | null;
+  /** Only when it differs from the phone. */
+  whatsappPhone?: string | null;
+  heardFrom?: string | null;
+  /** Admin's "Approved now". */
+  approved?: boolean;
 }
 
 /** NGO sign-up. The NGO's activities stay hidden until an admin approves it. */
 export async function createOrg(userId: string, o: NewOrg): Promise<Org> {
   const [org] = await query<Org>(
-    `insert into organisations (name, slug, city, causes, contact_name, contact_phone, registration_no, about, status)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, 'pending') returning *`,
-    [o.name, `${slugify(o.name)}-${suffix()}`, o.city, o.causes, o.contactName, o.contactPhone, o.registrationNo, o.about],
+    `insert into organisations (name, slug, city, causes, contact_name, contact_phone, registration_no, about, whatsapp_phone, heard_from, status, verified_at)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, case when $11 = 'approved' then now() end) returning *`,
+    [o.name, `${slugify(o.name)}-${suffix()}`, o.city, o.causes, o.contactName, o.contactPhone, o.registrationNo, o.about,
+      o.whatsappPhone ?? null, o.heardFrom ?? null, o.approved ? "approved" : "pending"],
   );
   await query("insert into org_members (org_id, user_id, role) values ($1, $2, 'owner')", [org.id, userId]);
   await query("update users set role = 'ngo_member' where id = $1 and role = 'volunteer'", [userId]);
@@ -67,9 +76,9 @@ export async function contactRole(orgId: string): Promise<string> {
   return typeof row?.value === "string" ? row.value : "";
 }
 
-export async function listOrgs(): Promise<(Org & { owner_name: string | null; owner_email: string | null; owner_role: string | null; activities: number })[]> {
+export async function listOrgs(): Promise<(Org & { owner_id: string | null; owner_name: string | null; owner_email: string | null; owner_role: string | null; activities: number })[]> {
   return query(
-    `select o.*, u.name as owner_name, u.email as owner_email,
+    `select o.*, u.id as owner_id, u.name as owner_name, u.email as owner_email,
             (select value #>> '{}' from app_state where key = 'org_role:' || o.id) as owner_role,
             (select count(*)::int from tasks t where t.org_id = o.id) as activities
      from organisations o

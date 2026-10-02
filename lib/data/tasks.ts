@@ -31,6 +31,9 @@ export interface Activity {
   contact_name: string;
   contact_phone: string;
   share_slug: string;
+  /** "closed" = taken down: hidden from volunteers. */
+  status: "draft" | "published" | "closed";
+  is_seed: boolean;
   created_at: Date;
 }
 

@@ -23,12 +23,12 @@ const LOCAL_AUTH_STUB = `
   $$ select nullif(current_setting('app.user_id', true), '')::uuid $$;
 `;
 
-export function migrationSql(): string[] {
+export function migrationFiles(): { name: string; sql: string }[] {
   return fs
     .readdirSync(MIGRATIONS_DIR)
     .filter((f) => f.endsWith(".sql"))
     .sort()
-    .map((f) => fs.readFileSync(path.join(MIGRATIONS_DIR, f), "utf8"));
+    .map((name) => ({ name, sql: fs.readFileSync(path.join(MIGRATIONS_DIR, name), "utf8") }));
 }
 
 async function isMigrated(db: Db): Promise<boolean> {
@@ -38,15 +38,30 @@ async function isMigrated(db: Db): Promise<boolean> {
   return rows[0].exists;
 }
 
+/** The first two files went in together before migrations were recorded one by one. */
+const BASELINE = "0003";
+
+/** Applies any migration file not yet applied. Returns true if it changed anything. */
 export async function migrate(db: Db, { local }: { local: boolean }): Promise<boolean> {
-  if (await isMigrated(db)) return false;
-  // Supabase ships auth.uid(); any other Postgres (embedded, Neon…) gets the stub.
-  const [{ has_auth }] = await db.query<{ has_auth: boolean }>(
-    "select to_regprocedure('auth.uid()') is not null as has_auth",
-  );
-  if (local || !has_auth) await db.exec(LOCAL_AUTH_STUB);
-  for (const sql of migrationSql()) await db.exec(sql);
-  return true;
+  const fresh = !(await isMigrated(db));
+  if (fresh) {
+    // Supabase ships auth.uid(); any other Postgres (embedded, Neon…) gets the stub.
+    const [{ has_auth }] = await db.query<{ has_auth: boolean }>(
+      "select to_regprocedure('auth.uid()') is not null as has_auth",
+    );
+    if (local || !has_auth) await db.exec(LOCAL_AUTH_STUB);
+  }
+  const done = fresh
+    ? new Set<string>()
+    : new Set((await db.query<{ key: string }>("select key from app_state where key like 'migration:%'")).map((r) => r.key.slice(10)));
+  let changed = false;
+  for (const f of migrationFiles()) {
+    if (done.has(f.name) || (!fresh && f.name < BASELINE)) continue;
+    await db.exec(f.sql);
+    await db.query("insert into app_state (key, value) values ($1, 'true'::jsonb) on conflict (key) do nothing", [`migration:${f.name}`]);
+    changed = true;
+  }
+  return changed;
 }
 
 /** Embedded Postgres. Pass no dataDir for an in-memory database (tests). */
@@ -64,7 +79,7 @@ export async function createLocalDb(dataDir?: string): Promise<Db> {
   };
 }
 
-async function createRemoteDb(url: string): Promise<Db> {
+export async function createRemoteDb(url: string): Promise<Db> {
   const { default: postgres } = await import("postgres");
   const sql = postgres(url, { prepare: false, max: 5 });
   return {

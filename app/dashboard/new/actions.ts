@@ -2,7 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { now } from "@/lib/clock";
-import { CAUSES, CITY_NAMES } from "@/lib/constants";
+import { CAUSES } from "@/lib/constants";
+import { readPlace } from "@/lib/place";
 import { createActivity } from "@/lib/data/tasks";
 import { track } from "@/lib/events";
 import { istToDate, normalisePhone } from "@/lib/format";
@@ -40,12 +41,13 @@ export async function postActivityAction(_prev: PostState, form: FormData): Prom
   if (repeats && (!Number.isInteger(times) || times < 2 || times > 26)) errors.times = "Between 2 and 26 weeks.";
 
   const online = f("mode") === "online";
+  const place = readPlace(form, false);
   const lat = Number(f("lat"));
   const lng = Number(f("lng"));
   if (online) {
     if (!/^https?:\/\/\S+\.\S+/.test(f("online_link"))) errors.online_link = "Please add the link. It starts with https://";
   } else {
-    if (!CITY_NAMES.includes(f("city"))) errors.city = "Pick a city.";
+    if (!place) errors.city = "Pick a city, or type the town or village.";
     need("address", "the address", 6);
   }
 
@@ -60,7 +62,7 @@ export async function postActivityAction(_prev: PostState, form: FormData): Prom
   const a = await createActivity({
     org_id: org.id, title: f("title"), cause: f("cause"), role: f("role"), done_definition: f("done_definition"),
     mode: online ? "online" : "onsite",
-    city: online ? org.city : f("city"),
+    city: online ? org.city : place!,
     address: online ? null : f("address"),
     lat: online || Number.isNaN(lat) ? null : lat,
     lng: online || Number.isNaN(lng) ? null : lng,

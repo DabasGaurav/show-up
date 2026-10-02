@@ -10,7 +10,9 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "seed": "node scripts/seed.mjs",
-    "db:migrate": "tsx --conditions=react-server scripts/migrate.ts"
+    "db:migrate": "tsx --conditions=react-server scripts/migrate.ts",
+    "listings:import": "tsx --conditions=react-server scripts/import-listings.ts data/listings.json",
+    "listings:check": "tsx --conditions=react-server scripts/import-listings.ts data/listings.json --dry-run"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

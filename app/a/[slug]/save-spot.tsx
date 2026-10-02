@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useActionState, useState } from "react";
 import { CalendarPlus, Share2 } from "lucide-react";
 import { Confetti } from "@/components/confetti";
-import { FormError } from "@/components/forms/field";
+import { Field, FormError, TextInput } from "@/components/forms/field";
 import { Sheet } from "@/components/sheet";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,9 @@ export interface SaveSpotProps {
   slug: string;
   dateId: string;
   signedIn: boolean;
+  /** First spot: ask for name and mobile on this sheet. */
+  askDetails: boolean;
+  name: string;
   /** Open the sheet straight away (coming back from sign-up or sign-in). */
   autoOpen: boolean;
   title: string;
@@ -78,6 +81,17 @@ export function SaveSpot(p: SaveSpotProps) {
             <p>
               {p.freeBy ? <>If something comes up, tell them by <strong>{p.freeBy}</strong>.</> : <>It&apos;s close to the day, so they&apos;re counting on you.</>}
             </p>
+            {p.askDetails && (
+              <div className="space-y-3">
+                <Field label="Your name" htmlFor="spot-name"><TextInput id="spot-name" name="name" autoComplete="name" defaultValue={p.name} required /></Field>
+                <Field label="Mobile number" htmlFor="spot-phone" hint="Shared with the NGO only once you confirm.">
+                  <div className="flex gap-2">
+                    <span className="flex h-12 items-center rounded-xl border border-input bg-muted px-3 font-medium">+91</span>
+                    <TextInput id="spot-phone" name="phone" type="tel" inputMode="numeric" autoComplete="tel-national" required />
+                  </div>
+                </Field>
+              </div>
+            )}
             <FormError message={state.error} />
             <Button type="submit" size="tap" className={big} disabled={pending}>{pending ? "Saving…" : "Yes, save my spot"}</Button>
             <button type="button" onClick={() => setOpen(false)} className="mx-auto flex min-h-11 items-center font-medium text-ink-soft underline underline-offset-2">Not now</button>

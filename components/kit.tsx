@@ -105,14 +105,14 @@ export function TrackDots({ record, className }: { record: TR; className?: strin
 }
 
 /** "Who's coming" bar: coming / not heard back / can't make it / still needed. */
-export function WhoBar({ who, className }: { who: WhoCounts; className?: string }) {
+export function WhoBar({ who, className, lastLabel = "still needed" }: { who: WhoCounts; className?: string; lastLabel?: string }) {
   const cells = Math.max(who.needed, who.coming + who.notHeardBack);
   const shown = Math.min(cells, 30);
   const text = [
     `${who.coming} coming`,
     `${who.notHeardBack} not heard back`,
     `${who.cantMakeIt} can't make it`,
-    `${who.stillNeeded} still needed`,
+    `${who.stillNeeded} ${lastLabel}`,
   ].join(" · ");
   return (
     <div className={className}>
@@ -131,7 +131,7 @@ export function WhoBar({ who, className }: { who: WhoCounts; className?: string 
         <span className="font-semibold text-ok">{who.coming} coming</span>
         {" · "}<span className={cn(who.notHeardBack > 0 ? "font-semibold text-warn" : "text-ink-soft")}>{who.notHeardBack} not heard back</span>
         {" · "}<span className="text-ink-soft">{who.cantMakeIt} can&apos;t make it</span>
-        {" · "}<span className={cn(who.stillNeeded > 0 ? "font-semibold text-gap" : "text-ink-soft")}>{who.stillNeeded} still needed</span>
+        {" · "}<span className={cn(who.stillNeeded > 0 ? "font-semibold text-gap" : "text-ink-soft")}>{who.stillNeeded} {lastLabel}</span>
       </p>
     </div>
   );

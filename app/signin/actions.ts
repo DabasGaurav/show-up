@@ -2,8 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { safeNext, signOut } from "@/lib/auth";
-import { CAUSES, CITY_NAMES, ONLINE } from "@/lib/constants";
-import { normalisePhone } from "@/lib/format";
+import { CAUSES } from "@/lib/constants";
+import { readPlace } from "@/lib/place";
 import { hasAccount, startSignIn } from "@/lib/signin";
 import { siteUrl } from "@/lib/site";
 
@@ -16,6 +16,8 @@ export interface SignInState {
   link?: string | null;
   error?: string;
   fields?: Record<string, string>;
+  /** The city or town as it will be stored. */
+  place?: string;
   causes?: string[];
 }
 
@@ -33,14 +35,14 @@ export async function signInAction(_prev: SignInState, form: FormData): Promise<
   }
   if (form.get("step") !== "details") return { isNew: true, email };
 
-  const fields = { name: str(form.get("name")), phone: str(form.get("phone")), city: str(form.get("city")) };
+  const fields = { name: str(form.get("name")), city: str(form.get("city")), city_other: str(form.get("city_other")) };
   const causes = form.getAll("causes").map(String).filter((c) => (CAUSES as readonly string[]).includes(c));
-  const fail = (error: string): SignInState => ({ isNew: true, error, email, fields, causes });
+  const fail = (error: string): SignInState => ({ isNew: true, error, email, fields, causes, place: readPlace(form, true) ?? fields.city_other });
   if (fields.name.length < 2) return fail("Please add your name.");
-  const phone = normalisePhone(fields.phone);
-  if (!phone) return fail("That number doesn't look right. It should have 10 digits.");
-  if (![...CITY_NAMES, ONLINE].includes(fields.city)) return fail("Pick your city.");
-  const res = await startSignIn({ email, next, signup: { name: fields.name, phone, city: fields.city, causes } }, await siteUrl());
+  const city = readPlace(form, true);
+  if (!city) return fail("Pick your city, or type your town.");
+  // The mobile number is asked for later, on the first spot they save.
+  const res = await startSignIn({ email, next, signup: { name: fields.name, city, causes } }, await siteUrl());
   return res.ok ? { sent: true, email, link: res.link } : fail(res.error);
 }
 

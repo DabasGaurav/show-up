@@ -11,6 +11,7 @@ Live: https://showup-mvp-rosy.vercel.app (Vercel project `showup-mvp`, Neon Post
 | `ADMIN_PASSCODE` | opens `/admin` |
 | `CRON_SECRET` | protects `/api/cron` |
 | `NEXT_PUBLIC_SITE_URL` | the live address, used in email links |
+| `CONTACT_EMAIL` | shown in the footer as "Write to us"; the line is left out until this is set |
 | `RESEND_API_KEY`, `EMAIL_FROM` | **needed before anyone can sign in**: emails are only logged without them |
 
 Values are kept in `.env.hosted-mvp` and `.env.neon` (not in git).
@@ -18,7 +19,7 @@ Values are kept in `.env.hosted-mvp` and `.env.neon` (not in git).
 ## Deploy
 
 ```bash
-npm run db:migrate   # with DATABASE_URL set, only when the schema changes
+npm run db:migrate   # with DATABASE_URL set; applies any new file in supabase/migrations
 vercel --prod
 ```
 

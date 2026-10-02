@@ -1,5 +1,6 @@
 import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { queryOne } from "@/lib/db";
@@ -9,6 +10,8 @@ import { queryOne } from "@/lib/db";
 
 const USER_COOKIE = "su_uid";
 const ADMIN_COOKIE = "su_admin";
+/** Admin only: the person whose pages the team is looking at ("Viewing as …"). */
+const AS_COOKIE = "su_as";
 const MAX_AGE = 60 * 60 * 24 * 60;
 
 const DEV_SECRET = "dev-only-secret-change-me";
@@ -66,10 +69,33 @@ export async function signOut(): Promise<void> {
   (await cookies()).delete(USER_COOKIE);
 }
 
-export async function getUser(): Promise<User | null> {
-  const id = unseal((await cookies()).get(USER_COOKIE)?.value);
+const adminCookie = async () => unseal((await cookies()).get(ADMIN_COOKIE)?.value) === "admin";
+
+/** The id the team is viewing as, if any. Only honoured with the admin cookie. */
+async function viewingId(): Promise<string | null> {
+  const as = unseal((await cookies()).get(AS_COOKIE)?.value);
+  return as && (await adminCookie()) ? as : null;
+}
+
+/** The signed-in person, or the person an admin is viewing as. One lookup per request. */
+export const getUser = cache(async (): Promise<User | null> => {
+  const id = (await viewingId()) ?? unseal((await cookies()).get(USER_COOKIE)?.value);
   if (!id) return null;
   return queryOne<User>("select * from users where id = $1", [id]);
+});
+
+/** Set while an admin is looking at someone's pages. */
+export async function viewingAs(): Promise<User | null> {
+  return (await viewingId()) ? getUser() : null;
+}
+
+export async function viewAs(userId: string): Promise<void> {
+  if (!(await adminCookie())) throw new Error("Not allowed");
+  (await cookies()).set(AS_COOKIE, seal(userId), { ...cookieOpts, maxAge: 60 * 60 * 4 });
+}
+
+export async function stopViewing(): Promise<void> {
+  (await cookies()).delete(AS_COOKIE);
 }
 
 /** Sends the visitor to sign in, then back to `next`. */
@@ -97,12 +123,14 @@ export async function unlockAdmin(passcode: string): Promise<boolean> {
 }
 
 export async function lockAdmin(): Promise<void> {
+  (await cookies()).delete(AS_COOKIE);
   (await cookies()).delete(ADMIN_COOKIE);
 }
 
 export async function isAdmin(): Promise<boolean> {
-  if (unseal((await cookies()).get(ADMIN_COOKIE)?.value) === "admin") return true;
-  return (await getUser())?.role === "admin";
+  if (await adminCookie()) return true;
+  const id = unseal((await cookies()).get(USER_COOKIE)?.value);
+  return id ? (await queryOne<{ role: string }>("select role from users where id = $1", [id]))?.role === "admin" : false;
 }
 
 /** Only allow same-site relative redirects. */

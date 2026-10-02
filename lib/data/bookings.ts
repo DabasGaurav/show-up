@@ -21,6 +21,8 @@ export interface Spot {
   released_at: Date | null;
   release_reason: Reason | null;
   created_at: Date;
+  /** Loaded with the launch listings. */
+  is_seed: boolean;
   start_at: Date;
   end_at: Date;
   activity_id: string;
@@ -176,7 +178,7 @@ export async function freeSpot(s: Spot, reason: Reason | null, now: Date): Promi
   if (rows.length === 0) return null;
 
   await sendEmail({
-    type: "freed_volunteer", to: s.user_email, userId: s.user_id, about: s.title, key: `freed_volunteer:${s.id}`,
+    type: "freed_volunteer", seed: s.is_seed, to: s.user_email, userId: s.user_id, about: s.title, key: `freed_volunteer:${s.id}`,
     text: MSG.freedToVolunteer({ ngo: s.org_name }),
   });
   const statuses = await query<{ status: BookingStatus }>("select status from bookings where occurrence_id = $1", [s.occurrence_id]);
@@ -185,7 +187,7 @@ export async function freeSpot(s: Spot, reason: Reason | null, now: Date): Promi
     name: s.user_name.split(" ")[0], title: s.title, reason: reason ? REASON_PHRASE[reason] : null, coming: who.coming, needed: who.needed,
   });
   for (const m of await orgEmails(s.org_id)) {
-    await sendEmail({ type: "freed_ngo", to: m.email, userId: m.id, about: s.title, key: `freed_ngo:${s.id}:${m.id}`, text });
+    await sendEmail({ type: "freed_ngo", seed: s.is_seed, to: m.email, userId: m.id, about: s.title, key: `freed_ngo:${s.id}:${m.id}`, text });
   }
   await track("spot_freed", { spot: s.id, type, reason }, s.user_id);
   return type;
@@ -210,10 +212,10 @@ export async function markWhoCame(dateId: string, marks: Record<string, "attende
   return changed;
 }
 
-/** The one number on the admin page, and the rows behind the CSV export. */
+/** The one number on the admin page. Spots loaded with the launch listings are left out. */
 export async function pastStatuses(now: Date): Promise<BookingStatus[]> {
   const rows = await query<{ status: BookingStatus }>(
-    "select b.status from bookings b join task_occurrences oc on oc.id = b.occurrence_id where oc.start_at <= $1",
+    "select b.status from bookings b join task_occurrences oc on oc.id = b.occurrence_id where oc.start_at <= $1 and not b.is_seed",
     [now],
   );
   return rows.map((r) => r.status);

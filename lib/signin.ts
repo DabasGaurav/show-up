@@ -14,7 +14,8 @@ const key = (token: string) => `signin:${token}`;
 
 export interface SignUp {
   name: string;
-  phone: string;
+  /** Volunteers give their mobile on the first spot they save; NGO coordinators give it here. */
+  phone?: string;
   city?: string | null;
   causes?: string[];
   /** Present on NGO sign-up. The NGO is created, waiting for approval, when the link is opened. */
@@ -67,9 +68,9 @@ export async function finishSignIn(token: string): Promise<{ userId: string; nex
     await query("update users set last_active_at = now() where id = $1", [userId]);
   } else {
     if (!s) return null;
-    const phoneFree = (await queryOne("select 1 as taken from users where phone = $1", [s.phone])) === null;
+    const phoneFree = Boolean(s.phone) && (await queryOne("select 1 as taken from users where phone = $1", [s.phone])) === null;
     const [u] = await query<{ id: string }>(
-      "insert into users (name, phone, email, phone_verified_at, city, saved_causes) values ($1, $2, $3, now(), $4, $5) returning id",
+      "insert into users (name, phone, email, city, saved_causes) values ($1, $2, $3, $4, $5) returning id",
       [s.name, phoneFree ? s.phone : null, p.email, s.city ?? null, s.causes ?? []],
     );
     userId = u.id;

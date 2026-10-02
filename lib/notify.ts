@@ -13,7 +13,12 @@ export interface Email {
   /** Added to the subject, e.g. the activity title. */
   about?: string;
   key?: string;
+  /** About a spot loaded with the launch listings: never emailed. */
+  seed?: boolean;
 }
+
+/** Addresses on the reserved .test domain (our launch listings use @showup.test) must never get mail. */
+export const isTestAddress = (to: string) => /\.test$/i.test(to.trim());
 
 async function deliver(to: string, subject: string, text: string): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY;
@@ -31,9 +36,11 @@ async function deliver(to: string, subject: string, text: string): Promise<boole
   return res.ok;
 }
 
-/** Returns "sent", "logged" (no provider set up), "failed", or "duplicate". */
-export async function sendEmail(e: Email): Promise<"sent" | "logged" | "failed" | "duplicate"> {
+/** Returns "sent", "logged" (no provider set up), "failed", "duplicate", or "skipped" (launch-listing data). */
+export async function sendEmail(e: Email): Promise<"sent" | "logged" | "failed" | "duplicate" | "skipped"> {
   if (!e.to) return "failed";
+  // The guard lives here, in the sender, so no caller can get round it.
+  if (e.seed || isTestAddress(e.to)) return "skipped";
   const subject = [SUBJECT[e.type] ?? "Show-Up", e.about].filter(Boolean).join(" · ");
   const rows = await query<{ id: string }>(
     `insert into notifications (user_id, type, channel, payload, status, dedupe_key)

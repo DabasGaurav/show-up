@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BellRing, Link2, UsersRound } from "lucide-react";
-import { HeroPeeps } from "@/components/art";
+import { WhoBar } from "@/components/kit";
 import { Header } from "@/components/site-header";
 import { buttonVariants } from "@/components/ui/button";
 import { getUser } from "@/lib/auth";
@@ -35,7 +35,10 @@ export default async function ForNgos() {
               </li>
             ))}
           </ul>
-          <HeroPeeps className="mt-8 hidden max-w-sm sm:flex" />
+          <figure className="mt-8 max-w-md rounded-xl bg-card p-5">
+            <figcaption className="mb-3 font-semibold">Before the day, you see this:</figcaption>
+            <WhoBar who={{ needed: 14, coming: 8, notHeardBack: 2, cantMakeIt: 1, stillNeeded: 4 }} lastLabel="to go" />
+          </figure>
         </div>
         <div className="rounded-xl bg-card p-5 text-center">
           <h2 className="text-2xl">It&apos;s free, and takes two minutes.</h2>

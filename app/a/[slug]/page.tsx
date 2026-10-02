@@ -18,10 +18,10 @@ import { siteUrl } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { SaveSpot } from "./save-spot";
 
-/** Only activities from NGOs we have approved are public. */
+/** Only activities from NGOs we have approved are public, and not ones that were taken down. */
 async function load(slug: string) {
   const a = await getActivityBySlug(slug);
-  return a && a.org_status === "approved" ? a : null;
+  return a && a.org_status === "approved" && a.status === "published" ? a : null;
 }
 
 export async function generateMetadata(props: PageProps<"/a/[slug]">): Promise<Metadata> {
@@ -108,6 +108,8 @@ export default async function ActivityPage(props: PageProps<"/a/[slug]">) {
               slug={slug}
               dateId={date.id}
               signedIn={user !== null}
+              askDetails={user !== null && !user.phone}
+              name={user?.name ?? ""}
               autoOpen={save === "1"}
               title={a.title}
               orgName={a.org_name}
