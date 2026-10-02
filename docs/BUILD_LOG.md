@@ -101,3 +101,14 @@ modes.
 - **WhatsApp link preview** has only been checked by reading the Open Graph tags and rendering the preview
   image locally; it needs a public URL to confirm inside WhatsApp.
 - **Performance target** (<2.5s first load on mid-range Android over 4G) has not been measured on a device.
+
+## Hosting (2 Oct 2026)
+
+- **MVP1 is live at https://showup-mvp-rosy.vercel.app** (Vercel project `showup-mvp`, team GAURAV).
+- **Database:** Neon Postgres from the Vercel Marketplace (`showup-mvp-db`), not Supabase. The same migrations
+  run there; the migration step adds a stub `auth.uid()` when the host is not Supabase. Moving to Supabase
+  later means running `npm run db:migrate` against it and changing `DATABASE_URL`.
+- **Cron runs once a day** (Hobby plan limit). Pages that show booking status run the same jobs on load.
+- **Secrets** (session secret, admin passcode, cron secret) are in the gitignored `.env.hosted-mvp`.
+- **Not set yet:** `RESEND_API_KEY` / `EMAIL_FROM`. Until then sign-in codes are not delivered.
+- **Prototype is not hosted**; it runs locally.

@@ -41,7 +41,11 @@ async function isMigrated(db: Db): Promise<boolean> {
 
 export async function migrate(db: Db, { local }: { local: boolean }): Promise<boolean> {
   if (await isMigrated(db)) return false;
-  if (local) await db.exec(LOCAL_AUTH_STUB);
+  // Supabase ships auth.uid(); any other Postgres (embedded, Neon…) gets the stub.
+  const [{ has_auth }] = await db.query<{ has_auth: boolean }>(
+    "select to_regprocedure('auth.uid()') is not null as has_auth",
+  );
+  if (local || !has_auth) await db.exec(LOCAL_AUTH_STUB);
   for (const sql of migrationSql()) await db.exec(sql);
   return true;
 }

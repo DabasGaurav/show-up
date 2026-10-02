@@ -46,3 +46,7 @@ next-env.d.ts
 .next-mvp
 .next-build
 .next-build-mvp
+
+# added by the Neon integration installer
+.agents
+skills-lock.json
