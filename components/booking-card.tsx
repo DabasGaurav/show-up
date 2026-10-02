@@ -7,7 +7,17 @@ import { freeReleaseDeadline, statusChip } from "@/lib/rules";
 import { cn } from "@/lib/utils";
 
 /** A volunteer's booking under "My bookings" (§6.1 Screen 4). */
-export function BookingCard({ b, now, highlight }: { b: BookingView; now: Date; highlight?: boolean }) {
+export function BookingCard({
+  b,
+  now,
+  highlight,
+  footer,
+}: {
+  b: BookingView;
+  now: Date;
+  highlight?: boolean;
+  footer?: React.ReactNode;
+}) {
   const chip = statusChip(b.status, b.start_at, now);
   const upcoming = now.getTime() < b.start_at.getTime();
   const live = isActive(b.status) && upcoming;
@@ -78,6 +88,7 @@ export function BookingCard({ b, now, highlight }: { b: BookingView; now: Date; 
       {b.release_reason && (
         <p className="mt-2 text-xs text-muted-foreground">Released{b.released_at ? ` ${fmtDateTime(b.released_at)}` : ""} · reason: {b.release_reason}</p>
       )}
+      {footer}
     </article>
   );
 }

@@ -20,13 +20,6 @@ export interface JobReport {
   extra: Record<string, number>;
 }
 
-type Hook = (now: Date, origin: string) => Promise<Record<string, number>>;
-const hooks: Hook[] = [];
-/** Prototype-only features (standby offers, guaranteed response) register their own jobs. */
-export function registerJob(hook: Hook): void {
-  if (!hooks.includes(hook)) hooks.push(hook);
-}
-
 const ids = async (sql: string, params: unknown[]) =>
   (await query<{ id: string }>(sql, params)).map((r) => r.id);
 
@@ -112,8 +105,27 @@ export async function runJobs(now: Date, origin: string): Promise<JobReport> {
     )
   ).length;
 
-  if (isEnabled("F11") || isEnabled("F15") || isEnabled("F12")) {
-    for (const hook of hooks) Object.assign(report.extra, await hook(now, origin));
+  // Guaranteed response (F15): a request unanswered for 48h auto-releases, and the
+  // volunteer is pointed to similar tasks.
+  if (isEnabled("F15")) {
+    const released = await ids(
+      `update bookings set status = 'auto_released', released_at = $1
+       where status = 'requested' and created_at < $2 returning id`,
+      [now, new Date(now.getTime() - RULES.responseHours * HOUR_MS)],
+    );
+    for (const id of released) {
+      const b = (await getBooking(id))!;
+      const link = `${origin}/feed?cause=${encodeURIComponent(b.cause)}&city=${encodeURIComponent(b.mode === "online" ? "Online" : b.city)}`;
+      await messageVolunteer(b, "request_auto_released", MSG.requestAutoReleased({ ...messageTask(b), link }), { link });
+    }
+    report.extra.autoReleased = released.length;
+  }
+
+  // Standby cover (F11): expire offers nobody accepted in time.
+  if (isEnabled("F11")) {
+    report.extra.offersExpired = (
+      await ids("update standby_offers set status = 'expired' where status = 'sent' and expires_at <= $1 returning id", [now])
+    ).length;
   }
   return report;
 }

@@ -7,6 +7,7 @@ import { BookingCard } from "@/components/booking-card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
 import { bookingFacts, isActive, listBookingsForUser } from "@/lib/data/bookings";
+import { ratedBookingIds } from "@/lib/data/org-profile";
 import { isEnabled } from "@/lib/flags";
 import { fmtDate } from "@/lib/format";
 import { pausedUntil, reliabilityRecord, reliabilityString, trustLevel } from "@/lib/rules";
@@ -20,7 +21,7 @@ export const metadata: Metadata = { title: "My bookings" };
 
 export default async function MyBookingsPage(props: PageProps<"/me">) {
   const user = await requireUser("/me");
-  const { booked } = await props.searchParams;
+  const { booked, rated: justRated } = await props.searchParams;
   const at = await tick();
   const [bookings, facts] = await Promise.all([listBookingsForUser(user.id), bookingFacts(user.id)]);
 
@@ -30,6 +31,7 @@ export default async function MyBookingsPage(props: PageProps<"/me">) {
   const past = bookings.filter((b) => !upcoming.includes(b));
   const justBooked = bookings.find((b) => b.id === booked);
   const paused = pausedUntil(facts, at);
+  const rated = isEnabled("F17") ? await ratedBookingIds(past.map((b) => b.id), "volunteer") : new Set<string>();
 
   return (
     <>
@@ -44,6 +46,10 @@ export default async function MyBookingsPage(props: PageProps<"/me">) {
                 ? "You're booked and confirmed. We'll remind you on the day."
                 : "You're booked. We'll check in 48 hours before."}
           </p>
+        )}
+
+        {justRated && (
+          <p role="status" className="mb-4 rounded-lg bg-ok-soft px-4 py-3 text-sm font-medium text-ok">Thanks. Your rating is saved.</p>
         )}
 
         <section className="rounded-xl border bg-card p-4">
@@ -99,7 +105,19 @@ export default async function MyBookingsPage(props: PageProps<"/me">) {
             <h2 className="text-lg font-semibold">Past</h2>
             <ul className="mt-3 space-y-3">
               {past.map((b) => (
-                <li key={b.id}><BookingCard b={b} now={at} /></li>
+                <li key={b.id}>
+                  <BookingCard
+                    b={b}
+                    now={at}
+                    footer={
+                      isEnabled("F17") && b.status === "attended" && !rated.has(b.id) ? (
+                        <Link href={`/me/rate/${b.id}`} className={cn(buttonVariants({ size: "tap", variant: "outline" }), "mt-3 w-full")}>
+                          Rate {b.org_name}
+                        </Link>
+                      ) : undefined
+                    }
+                  />
+                </li>
               ))}
             </ul>
           </section>
