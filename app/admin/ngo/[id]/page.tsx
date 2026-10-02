@@ -39,7 +39,7 @@ export default async function AdminNgo(props: PageProps<"/admin/ngo/[id]">) {
         <Field label="Their role" htmlFor="role" optional><TextInput id="role" name="role" defaultValue={role} placeholder="e.g. Founder" /></Field>
         {isNew
           ? <Field label="Their email" htmlFor="email" hint="They sign in with a link sent here"><TextInput id="email" name="email" type="email" required /></Field>
-          : <p className="text-sm text-ink-soft">Signs in as {owner?.email ?? "nobody yet"}</p>}
+          : <Field label="Their email" htmlFor="email" hint="They sign in with a link sent here. Change it to hand the dashboard over."><TextInput id="email" name="email" type="email" defaultValue={owner?.email ?? ""} /></Field>}
         <Field label="Phone" htmlFor="phone" optional><TextInput id="phone" name="phone" type="tel" inputMode="numeric" defaultValue={local(org?.contact_phone)} /></Field>
         <Field label="WhatsApp, if different" htmlFor="whatsapp" optional><TextInput id="whatsapp" name="whatsapp" type="tel" inputMode="numeric" defaultValue={local(org?.whatsapp_phone)} /></Field>
         <Field label="How did they hear about Show-Up?" htmlFor="heard_from" optional>

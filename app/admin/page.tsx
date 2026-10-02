@@ -12,7 +12,8 @@ import { listOrgs } from "@/lib/data/orgs";
 import { fmtDayDate, fmtPhone, fmtTime } from "@/lib/format";
 import { showUpRate, trackRecord } from "@/lib/rules";
 import { cn } from "@/lib/utils";
-import { decideOrgAction, saveSpotAction, toggleActivityAction, viewAsAction } from "./actions";
+import { query } from "@/lib/db";
+import { decideOrgAction, messageDoneAction, saveSpotAction, toggleActivityAction, viewAsAction } from "./actions";
 import { AdminShell, adminError } from "./shell";
 import { UnlockForm } from "./unlock-form";
 
@@ -20,7 +21,7 @@ export const metadata: Metadata = { title: "Admin", robots: { index: false } };
 
 const TARGET = 80;
 const STATUS = { pending: { label: "Waiting for us", tone: "amber" }, approved: { label: "Live", tone: "green" }, rejected: { label: "Rejected", tone: "grey" } } as const;
-const TABS = [["ngos", "NGOs"], ["activities", "Activities"], ["volunteers", "Volunteers"], ["spots", "Spots"]] as const;
+const TABS = [["ngos", "NGOs"], ["activities", "Activities"], ["volunteers", "Volunteers"], ["spots", "Spots"], ["messages", "Messages"]] as const;
 const SPOT_STATUS = [
   ["booked", "Saved"], ["awaiting_confirmation", "Waiting for a yes"], ["confirmed", "Confirmed"], ["released_early", "Freed early"],
   ["released_late", "Freed late"], ["attended", "Came"], ["no_show", "Didn't come"],
@@ -73,6 +74,7 @@ export default async function Admin(props: PageProps<"/admin">) {
       {tab === "activities" && <Activities />}
       {tab === "volunteers" && <Volunteers />}
       {tab === "spots" && <Spots />}
+      {tab === "messages" && <Messages />}
     </AdminShell>
   );
 }
@@ -217,6 +219,33 @@ async function Spots() {
               </Select>
               <Button type="submit" size="tap" variant="outline" className="h-11">Save</Button>
               <Button type="submit" name="delete" value="1" size="tap" variant="ghost" className="h-11 text-gap">Delete</Button>
+            </form>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+async function Messages() {
+  const list = await query<{ id: string; name: string; email: string; message: string; done: boolean; created_at: Date }>(
+    "select id, name, email, message, done, created_at from contact_messages order by done, created_at desc limit 200",
+  );
+  return (
+    <>
+      <Heading title="Messages" />
+      <p className="mt-1 text-sm text-ink-soft">Sent from the &quot;Write to us&quot; page. Reply from your own email.</p>
+      {list.length === 0 && <p className="mt-3 rounded-xl bg-card p-5 text-ink-soft">No messages yet.</p>}
+      <ul className="mt-3 space-y-2">
+        {list.map((m) => (
+          <li key={m.id} className={cn("rounded-xl bg-card p-4", m.done && "opacity-60")}>
+            <p className="font-semibold">{m.name} · <a href={`mailto:${m.email}`} className="text-primary underline underline-offset-2">{m.email}</a></p>
+            <p className="text-sm text-ink-soft">{fmtDayDate(m.created_at)}, {fmtTime(m.created_at)}</p>
+            <p className="mt-2 whitespace-pre-wrap">{m.message}</p>
+            <form action={messageDoneAction} className="mt-2">
+              <input type="hidden" name="id" value={m.id} />
+              <input type="hidden" name="done" value={m.done ? "0" : "1"} />
+              <Button type="submit" size="tap" variant="outline" className="h-11">{m.done ? "Mark as not answered" : "Mark as answered"}</Button>
             </form>
           </li>
         ))}

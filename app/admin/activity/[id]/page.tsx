@@ -56,7 +56,14 @@ export default async function AdminActivity(props: PageProps<"/admin/activity/[i
             <Field label="How many weeks?" htmlFor="times" hint="1 for a one-off"><TextInput id="times" name="times" type="number" min={1} max={26} defaultValue={1} className="max-w-32" /></Field>
           </>
         ) : (
-          <p className="rounded-xl bg-accent-soft px-4 py-3 text-sm">Dates can&apos;t be edited here. To move it, hide this one and add a new activity.</p>
+          <fieldset className="space-y-3 rounded-xl bg-accent-soft p-4">
+            <legend className="font-semibold">Move it (leave empty to keep the dates)</legend>
+            <Field label="New first date" htmlFor="date"><TextInput id="date" name="date" type="date" /></Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Start" htmlFor="start_time"><TextInput id="start_time" name="start_time" type="time" /></Field>
+              <Field label="End" htmlFor="end_time"><TextInput id="end_time" name="end_time" type="time" /></Field>
+            </div>
+          </fieldset>
         )}
         <Field label="On-site or online" htmlFor="mode">
           <Select id="mode" name="mode" defaultValue={a?.mode ?? (onlineOnly ? "online" : "onsite")}>

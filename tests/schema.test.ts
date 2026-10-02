@@ -13,7 +13,7 @@ describe("database schema (§7)", () => {
       "select tablename, rowsecurity from pg_tables where schemaname = 'public' order by 1",
     );
     expect(tables.map((t) => t.tablename)).toEqual([
-      "app_state", "bookings", "events", "lab_sessions", "notifications", "org_members",
+      "app_state", "bookings", "contact_messages", "events", "lab_sessions", "notifications", "org_members",
       "organisations", "ratings", "standby", "standby_offers", "task_occurrences", "tasks", "users", "waitlist_emails",
     ]);
     // RLS on all tables (§13).

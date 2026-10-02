@@ -11,6 +11,7 @@ import { createActivity } from "@/lib/data/tasks";
 import { query, queryOne } from "@/lib/db";
 import { istToDate, normalisePhone } from "@/lib/format";
 import { readPlace } from "@/lib/place";
+import { DAY_MS } from "@/lib/rules";
 
 const str = (v: FormDataEntryValue | null) => (typeof v === "string" ? v.trim() : "");
 const guard = async () => {
@@ -83,6 +84,14 @@ export async function saveOrgAction(form: FormData) {
     });
     redirect("/admin?toast=saved");
   }
+  // The coordinator's sign-in email can be changed, e.g. from a launch-listing address to their real one.
+  const newEmail = f("email").toLowerCase();
+  const owner = await ownerOf(id);
+  if (owner && newEmail && newEmail !== (owner.email ?? "").toLowerCase()) {
+    if (!/^\S+@\S+\.\S+$/.test(newEmail)) back(here, "That email doesn't look right.");
+    if (await queryOne("select 1 as taken from users where lower(email) = $1 and id <> $2", [newEmail, owner.id])) back(here, "That email is already on another account.");
+    await query("update users set email = $2 where id = $1", [owner.id, newEmail]);
+  }
   await query(
     `update organisations set name = $2, city = $3, causes = $4, about = $5, registration_no = $6, contact_name = $7, contact_phone = $8,
        whatsapp_phone = $9, heard_from = $10 where id = $1`,
@@ -140,6 +149,18 @@ export async function saveActivityAction(form: FormData) {
     if (!visible) await setActivityVisible(a.id, false);
     redirect("/admin?tab=activities&toast=saved");
   }
+  // Moving the date moves every weekly date with it; saved spots stay on their date.
+  if (f("date") || f("start_time") || f("end_time")) {
+    const start = istToDate(f("date"), f("start_time"));
+    const end = istToDate(f("date"), f("end_time"));
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) back(here, "To move it, fill the date, the start time and the end time.");
+    if (end.getTime() <= start.getTime()) back(here, "The end needs to be after the start.");
+    await query("update tasks set start_at = $2, end_at = $3, duration_min = $4 where id = $1", [id, start, end, Math.round((end.getTime() - start.getTime()) / 60000)]);
+    const dates = await query<{ id: string }>("select id from task_occurrences where task_id = $1 order by start_at", [id]);
+    for (const [i, d] of dates.entries()) {
+      await query("update task_occurrences set start_at = $2, end_at = $3 where id = $1", [d.id, new Date(start.getTime() + i * 7 * DAY_MS), new Date(end.getTime() + i * 7 * DAY_MS)]);
+    }
+  }
   await query(
     `update tasks set title = $2, cause = $3, role = $4, done_definition = $5, mode = $6, city = case when $6 = 'online' then city else $7 end,
        address = $8, online_link = $9, slots_needed = $10, contact_name = $11, contact_phone = $12, status = $13 where id = $1`,
@@ -165,5 +186,11 @@ export async function saveSpotAction(form: FormData) {
   await guard();
   if (form.get("delete") === "1") await deleteSpot(str(form.get("id")));
   else await setSpotStatus(str(form.get("id")), str(form.get("status")));
+  revalidatePath("/admin");
+}
+
+export async function messageDoneAction(form: FormData) {
+  await guard();
+  await query("update contact_messages set done = $2 where id = $1", [str(form.get("id")), form.get("done") === "1"]);
   revalidatePath("/admin");
 }

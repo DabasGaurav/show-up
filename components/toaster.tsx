@@ -18,6 +18,7 @@ const MESSAGES: Record<string, string> = {
   bademail: "That email doesn't look right.",
   saved: "Saved.",
   deleted: "Deleted.",
+  written: "Thanks. We'll write back soon.",
   noowner: "That NGO has no coordinator account to open.",
 };
 

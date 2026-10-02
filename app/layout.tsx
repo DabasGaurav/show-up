@@ -15,9 +15,6 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { themeColor: "#0f5257" };
 
-/** Set CONTACT_EMAIL on the host; the line is left out until it is. */
-const CONTACT = process.env.CONTACT_EMAIL ?? process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "";
-
 const footLink = "inline-flex min-h-11 items-center underline underline-offset-2";
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -32,7 +29,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <span className="font-heading font-semibold text-ink">Show-Up</span>
               <Link href="/for-ngos" className={footLink}>For NGOs</Link>
               <Link href="/privacy" className={footLink}>Privacy</Link>
-              {CONTACT && <span>Write to us: <a href={`mailto:${CONTACT}`} className={footLink}>{CONTACT}</a></span>}
+              <Link href="/contact" className={footLink}>Write to us</Link>
               <span>Made in India</span>
             </div>
           </div>

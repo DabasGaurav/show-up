@@ -1,10 +1,17 @@
 import type { Metadata } from "next";
-import { Lock, PhoneOff, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { BellRing, Eye, Lock, Trash2, UserRound } from "lucide-react";
 import { Header } from "@/components/site-header";
 
 export const metadata: Metadata = { title: "Privacy" };
 
-const CONTACT = process.env.NEXT_PUBLIC_CONTACT_EMAIL;
+const POINTS = [
+  { icon: <UserRound />, title: "What we keep", text: "Your name, email, mobile number, city and the spots you save." },
+  { icon: <Lock />, title: "Who sees your number", text: "Only the NGO, and only once your spot is confirmed." },
+  { icon: <Eye />, title: "What NGOs see", text: "Your first name and track record. Your number comes once you say yes." },
+  { icon: <BellRing />, title: "When we email you", text: "About your own plans, and one note if you've been away a while. Never ads." },
+  { icon: <Trash2 />, title: "Deleting your details", text: "Write to us and we delete your account within 7 days. We never sell details." },
+];
 
 export default function PrivacyPage() {
   return (
@@ -12,28 +19,19 @@ export default function PrivacyPage() {
       <Header />
       <main className="mx-auto w-full max-w-lg flex-1 px-4 py-8">
         <h1 className="text-3xl leading-9">Your details stay yours.</h1>
-        <ul className="mt-6 space-y-4">
-          <li className="flex gap-3 rounded-xl bg-card p-4">
-            <Lock className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden />
-            <p>An NGO sees your number only once your spot is confirmed.</p>
-          </li>
-          <li className="flex gap-3 rounded-xl bg-card p-4">
-            <PhoneOff className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden />
-            <p>We message you about your own plans. Nothing else, and never ads.</p>
-          </li>
-          <li className="flex gap-3 rounded-xl bg-card p-4">
-            <Trash2 className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden />
-            <p>We never sell your details. Ask us and we&apos;ll delete them.</p>
-          </li>
+        <ul className="mt-6 space-y-3">
+          {POINTS.map((p) => (
+            <li key={p.title} className="flex gap-3 rounded-xl bg-card p-4">
+              <span className="mt-0.5 shrink-0 text-primary [&>svg]:size-5" aria-hidden>{p.icon}</span>
+              <div>
+                <h2 className="font-sans text-base font-semibold">{p.title}</h2>
+                <p className="text-ink-soft">{p.text}</p>
+              </div>
+            </li>
+          ))}
         </ul>
-        <h2 id="contact" className="mt-10 scroll-mt-6 text-2xl">Contact us</h2>
-        <p className="mt-2 text-ink-soft">
-          {CONTACT ? (
-            <>Write to <a href={`mailto:${CONTACT}`} className="text-primary underline underline-offset-2">{CONTACT}</a>. A person on our team will reply.</>
-          ) : (
-            "Reply to any message you got from us. A person on our team will read it."
-          )}
-        </p>
+        <h2 id="contact" className="mt-10 scroll-mt-6 text-2xl">Questions?</h2>
+        <p className="mt-2"><Link href="/contact" className="font-semibold text-primary underline underline-offset-2">Write to us</Link>. A person on our team will reply.</p>
       </main>
     </>
   );

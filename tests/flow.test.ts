@@ -268,7 +268,7 @@ describe("launch listings", () => {
     const first = await importListings(data, { dryRun: false });
     expect([total(first.ngos), total(first.activities), total(first.volunteers)]).toEqual([10, 17, 28]);
     expect(first.warnings.filter((w) => w.startsWith("NGO name to confirm"))).toHaveLength(4);
-    expect(first.warnings.some((w) => w.includes("CITY TO CONFIRM"))).toBe(true);
+    expect(first.warnings.every((w) => /confirm/i.test(w))).toBe(true);
 
     const again = await importListings(data, { dryRun: false });
     expect(again.changes).toEqual([]);
