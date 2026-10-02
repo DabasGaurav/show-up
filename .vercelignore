@@ -1,0 +1,9 @@
+.data
+.next
+.next-mvp
+.next-build
+.next-build-mvp
+node_modules
+docs/screenshots
+tests
+.env*
