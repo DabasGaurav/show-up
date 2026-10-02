@@ -7,7 +7,7 @@ import { isPrototype } from "@/lib/flags";
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
   title: { default: S.brand, template: `%s · ${S.brand}` },
   description: S.pitch,
 };

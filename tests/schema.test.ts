@@ -28,9 +28,9 @@ describe("database schema (§7)", () => {
       "insert into organisations (name, slug, city, status) values ('Test Circle', 'test-circle', 'Pune', 'approved') returning id",
     );
     const [task] = await db.query<{ id: string }>(
-      `insert into tasks (org_id, title, cause, role, done_definition, mode, start_at, end_at, duration_min,
+      `insert into tasks (org_id, city, title, cause, role, done_definition, mode, start_at, end_at, duration_min,
          slots_needed, contact_name, contact_role, contact_phone, share_slug, status)
-       values ($1, 'Sapling drive', 'Plantation', 'Planter', 'Fifty saplings planted and watered', 'onsite',
+       values ($1, 'Pune', 'Sapling drive', 'Plantation', 'Planter', 'Fifty saplings planted and watered', 'onsite',
          now() + interval '5 days', now() + interval '5 days 2 hours', 120, 4, 'A', 'Coordinator', '+910000000000', 'sapling', 'published')
        returning id`,
       [org.id],
@@ -69,9 +69,9 @@ describe("database schema (§7)", () => {
       "insert into organisations (name, slug, city) values ('T', 't', 'Pune') returning id",
     );
     const [occ] = await db.query<{ id: string }>(
-      `with t as (insert into tasks (org_id, title, cause, role, done_definition, mode, start_at, end_at, duration_min,
+      `with t as (insert into tasks (org_id, city, title, cause, role, done_definition, mode, start_at, end_at, duration_min,
          slots_needed, contact_name, contact_role, contact_phone, share_slug)
-       values ($1, 'x', 'Teaching', 'r', 'd', 'online', now(), now(), 60, 2, 'A', 'B', 'C', 's') returning *)
+       values ($1, 'Pune', 'x', 'Teaching', 'r', 'd', 'online', now(), now(), 60, 2, 'A', 'B', 'C', 's') returning *)
        insert into task_occurrences (task_id, start_at, end_at) select id, start_at, end_at from t returning id`,
       [org.id],
     );

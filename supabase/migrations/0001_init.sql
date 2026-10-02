@@ -50,6 +50,7 @@ create table tasks (
   role            text not null,
   done_definition text not null,
   mode            text not null check (mode in ('onsite','online')),
+  city            text not null,
   address         text,
   lat             double precision,
   lng             double precision,
