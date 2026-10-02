@@ -383,8 +383,7 @@
       "name": "Hands to Care",
       "name_confirmed": true,
       "interview_id": "BH-N2",
-      "city": "Other",
-      "city_other": "CITY TO CONFIRM (ask Bhavarth)",
+      "city": "Delhi NCR",
       "causes": [
         "Food"
       ],
