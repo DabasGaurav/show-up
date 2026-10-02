@@ -34,6 +34,18 @@ export async function hasAccount(email: string): Promise<boolean> {
   return (await queryOne("select 1 as found from users where lower(email) = lower($1)", [email])) !== null;
 }
 
+/**
+ * Test accounts: emails listed in TEST_LOGINS (comma-separated) sign in without an
+ * email link, so the team can show the NGO and volunteer pages. Only launch-listing
+ * accounts on the reserved .test domain qualify, so no real person's account can be opened this way.
+ */
+export async function testLogin(email: string): Promise<string | null> {
+  const allowed = (process.env.TEST_LOGINS ?? "").toLowerCase().split(",").map((e) => e.trim()).filter(Boolean);
+  if (!allowed.includes(email.toLowerCase()) || !/\.test$/i.test(email)) return null;
+  const row = await queryOne<{ id: string }>("select id from users where lower(email) = lower($1) and is_seed", [email]);
+  return row?.id ?? null;
+}
+
 export async function startSignIn(p: Omit<Pending, "expires">, origin: string): Promise<{ ok: true; link: string | null } | { ok: false; error: string }> {
   const token = randomBytes(24).toString("base64url");
   await query("insert into app_state (key, value) values ($1, $2::jsonb)", [

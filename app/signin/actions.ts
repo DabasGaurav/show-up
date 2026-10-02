@@ -1,10 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { safeNext, signOut } from "@/lib/auth";
+import { safeNext, signIn, signOut } from "@/lib/auth";
 import { CAUSES } from "@/lib/constants";
 import { readPlace } from "@/lib/place";
-import { hasAccount, startSignIn } from "@/lib/signin";
+import { hasAccount, startSignIn, testLogin } from "@/lib/signin";
 import { siteUrl } from "@/lib/site";
 
 export interface SignInState {
@@ -28,6 +28,13 @@ export async function signInAction(_prev: SignInState, form: FormData): Promise<
   const email = str(form.get("email")).toLowerCase();
   const next = safeNext(str(form.get("next")));
   if (!/^\S+@\S+\.\S+$/.test(email)) return { error: "That email doesn't look right.", email };
+
+  // Test accounts (TEST_LOGINS on the host) sign in straight away, with no email link.
+  const testUser = await testLogin(email);
+  if (testUser) {
+    await signIn(testUser);
+    redirect(`${next}${next.includes("?") ? "&" : "?"}toast=in`);
+  }
 
   if (await hasAccount(email)) {
     const res = await startSignIn({ email, next }, await siteUrl());

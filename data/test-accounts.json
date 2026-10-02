@@ -1,0 +1,123 @@
+{
+  "ngos": [
+    {
+      "key": "test-ngo",
+      "name": "Show-Up Test Kitchen",
+      "name_confirmed": true,
+      "city": "Delhi NCR",
+      "causes": [
+        "Food",
+        "Teaching"
+      ],
+      "about": "A made-up NGO the Show-Up team uses for testing.",
+      "coordinator": {
+        "name": "Test Coordinator",
+        "role": "Founder"
+      },
+      "activities": [
+        {
+          "cause": "Food",
+          "mode": "onsite",
+          "address": "Community hall, Lajpat Nagar",
+          "repeats_weekly": 3,
+          "key": "pack-kits",
+          "title": "Test: pack 100 ration kits",
+          "date": "2026-10-09",
+          "start": "10:00",
+          "end": "12:00",
+          "spots": 5,
+          "what_you_do": "Sort and pack rice, dal and oil into kits.",
+          "done_when": "All 100 kits are packed and stacked."
+        },
+        {
+          "key": "homework-help",
+          "title": "Test: homework help on a video call",
+          "cause": "Teaching",
+          "mode": "online",
+          "date": "2026-10-05",
+          "start": "18:00",
+          "end": "19:00",
+          "repeats_weekly": 0,
+          "spots": 3,
+          "what_you_do": "Help two children with their homework over video.",
+          "done_when": "Both children have finished today's homework."
+        },
+        {
+          "cause": "Food",
+          "mode": "onsite",
+          "address": "Community hall, Lajpat Nagar",
+          "repeats_weekly": 0,
+          "key": "serve-lunch",
+          "title": "Test: serve lunch at the shelter",
+          "date": "2026-09-28",
+          "start": "12:00",
+          "end": "14:00",
+          "spots": 4,
+          "what_you_do": "Serve plates and clear tables.",
+          "done_when": "Everyone has eaten and the hall is clean.",
+          "past": true
+        }
+      ]
+    }
+  ],
+  "volunteers": [
+    {
+      "name": "Test Volunteer",
+      "email": "test-volunteer@showup.test",
+      "city": "Delhi NCR",
+      "causes": [
+        "Food",
+        "Teaching"
+      ],
+      "bookings": [
+        {
+          "ngo": "test-ngo",
+          "activity": "pack-kits",
+          "occurrence": 1,
+          "status": "saved"
+        },
+        {
+          "ngo": "test-ngo",
+          "activity": "homework-help",
+          "occurrence": 1,
+          "status": "confirmed"
+        },
+        {
+          "ngo": "test-ngo",
+          "activity": "serve-lunch",
+          "occurrence": 1,
+          "status": "came"
+        }
+      ]
+    },
+    {
+      "name": "Test Friend",
+      "email": "test-friend@showup.test",
+      "city": "Delhi NCR",
+      "causes": [
+        "Food"
+      ],
+      "bookings": [
+        {
+          "ngo": "test-ngo",
+          "activity": "pack-kits",
+          "occurrence": 1,
+          "status": "confirmed"
+        },
+        {
+          "ngo": "test-ngo",
+          "activity": "pack-kits",
+          "occurrence": 2,
+          "status": "freed_early",
+          "reason": "Travelling"
+        },
+        {
+          "ngo": "test-ngo",
+          "activity": "serve-lunch",
+          "occurrence": 1,
+          "status": "came"
+        }
+      ]
+    }
+  ]
+}
