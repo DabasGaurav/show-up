@@ -30,6 +30,10 @@ export function registerJob(hook: Hook): void {
 const ids = async (sql: string, params: unknown[]) =>
   (await query<{ id: string }>(sql, params)).map((r) => r.id);
 
+/** T−hours, or the booking time if the volunteer booked after that. */
+const dueAt = (b: { start_at: Date; created_at: Date }, hoursBefore: number) =>
+  new Date(Math.max(b.start_at.getTime() - hoursBefore * HOUR_MS, b.created_at.getTime()));
+
 export async function runJobs(now: Date, origin: string): Promise<JobReport> {
   const report: JobReport = { awaiting: 0, reminders: 0, dayOf: 0, attendancePrompts: 0, notRecorded: 0, extra: {} };
   const at = (hours: number) => new Date(now.getTime() + hours * HOUR_MS);
@@ -45,7 +49,7 @@ export async function runJobs(now: Date, origin: string): Promise<JobReport> {
     const b = (await getBooking(id))!;
     const link = `${origin}/c/${b.confirm_token}`;
     await messageVolunteer(b, "confirmation_request", MSG.confirmationRequest({ ...messageTask(b), link }), {
-      link, whatsappQueue: true, dueAt: new Date(b.start_at.getTime() - RULES.confirmRequestHours * HOUR_MS),
+      link, whatsappQueue: true, dueAt: dueAt(b, RULES.confirmRequestHours),
     });
     report.awaiting++;
   }
@@ -60,7 +64,7 @@ export async function runJobs(now: Date, origin: string): Promise<JobReport> {
     const b = (await getBooking(id))!;
     const link = `${origin}/c/${b.confirm_token}`;
     await messageVolunteer(b, "confirmation_reminder", MSG.confirmationReminder({ ...messageTask(b), link }), {
-      link, whatsappQueue: true, dueAt: new Date(b.start_at.getTime() - RULES.confirmReminderHours * HOUR_MS),
+      link, whatsappQueue: true, dueAt: dueAt(b, RULES.confirmReminderHours),
     });
     report.reminders++;
   }
@@ -77,7 +81,7 @@ export async function runJobs(now: Date, origin: string): Promise<JobReport> {
       b,
       "day_of_reminder",
       MSG.dayOfReminder({ ...messageTask(b), placeOrLink: placeOrLink(b), contact: contactLine(b), done: b.done_definition }),
-      { whatsappQueue: true, dueAt: new Date(b.start_at.getTime() - RULES.dayOfReminderHours * HOUR_MS) },
+      { whatsappQueue: true, dueAt: dueAt(b, RULES.dayOfReminderHours) },
     );
     report.dayOf++;
   }

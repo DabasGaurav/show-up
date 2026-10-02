@@ -38,7 +38,9 @@ export default async function MyBookingsPage(props: PageProps<"/me">) {
             <CheckCircle2 className="size-5 shrink-0" aria-hidden />
             {justBooked.status === "requested"
               ? `Request sent. ${justBooked.org_name} will reply within 48 hours.`
-              : "You're booked. We'll check in 48 hours before."}
+              : justBooked.status === "confirmed"
+                ? "You're booked and confirmed. We'll remind you on the day."
+                : "You're booked. We'll check in 48 hours before."}
           </p>
         )}
 

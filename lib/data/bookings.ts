@@ -322,3 +322,41 @@ export function placeOrLink(b: BookingView): string {
 }
 
 export const contactLine = (b: BookingView) => `${b.contact_name}, ${fmtPhone(b.contact_phone)}`;
+
+/**
+ * Attendance marking (F5, §5.4): from slot start until 72h after, the NGO marks each
+ * active booking Attended or No-show. Marks can be corrected inside the window.
+ */
+export async function markAttendance(
+  occurrenceId: string,
+  marks: Record<string, "attended" | "no_show">,
+): Promise<number> {
+  let changed = 0;
+  for (const [bookingId, status] of Object.entries(marks)) {
+    const rows = await query(
+      `update bookings set status = $3
+       where id = $1 and occurrence_id = $2
+         and status in ('booked','awaiting_confirmation','confirmed','attended','no_show') and status <> $3
+       returning id`,
+      [bookingId, occurrenceId, status],
+    );
+    changed += rows.length;
+  }
+  return changed;
+}
+
+/** Reliability records for many volunteers at once (turnout and applicant lists). */
+export async function bookingFactsFor(userIds: string[]): Promise<Map<string, BookingFact[]>> {
+  const out = new Map<string, BookingFact[]>(userIds.map((id) => [id, []]));
+  if (userIds.length === 0) return out;
+  const rows = await query<{ user_id: string; status: BookingStatus; start_at: Date; duration_min: number }>(
+    `select b.user_id, b.status, oc.start_at, t.duration_min
+     from bookings b
+     join task_occurrences oc on oc.id = b.occurrence_id
+     join tasks t on t.id = oc.task_id
+     where b.user_id = any($1::uuid[])`,
+    [userIds],
+  );
+  for (const r of rows) out.get(r.user_id)?.push({ status: r.status, startAt: r.start_at, durationMin: r.duration_min });
+  return out;
+}
