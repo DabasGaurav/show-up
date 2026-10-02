@@ -30,7 +30,9 @@ export default async function LabLayout({ children }: LayoutProps<"/lab">) {
         <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-3 px-4 py-2">
           <div className="flex items-center gap-3">
             <Brand />
-            <Link href="/lab" className="rounded-full bg-brand px-2.5 py-1 text-xs font-semibold text-white">Test Lab</Link>
+            <Link href="/lab" className="flex min-h-11 items-center">
+              <span className="rounded-full bg-brand px-2.5 py-1 text-xs font-semibold text-white">Test Lab</span>
+            </Link>
           </div>
           <nav className="flex items-center gap-1 text-sm">
             <Link href="/admin" className="flex min-h-11 items-center rounded-lg px-2.5 font-medium hover:bg-muted">Admin</Link>

@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR || ".next",
   // Embedded Postgres ships WASM; load it from node_modules instead of bundling.
   serverExternalPackages: ["@electric-sql/pglite"],
+  devIndicators: false,
 };
 
 export default nextConfig;

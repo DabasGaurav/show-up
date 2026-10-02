@@ -38,6 +38,7 @@ export default async function NgoTaskPage(props: PageProps<"/ngo/tasks/[id]">) {
             Published. Share the link below with your volunteers.
           </p>
         )}
+        <h1 className="mb-4 text-2xl font-bold">{task.title}</h1>
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
           <div className="space-y-6">
             <section className="rounded-xl border bg-card p-4">
@@ -86,7 +87,7 @@ export default async function NgoTaskPage(props: PageProps<"/ngo/tasks/[id]">) {
           </div>
           <aside>
             <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">What volunteers see</p>
-            {next && <TaskCard data={taskCardData(task, next, true)} />}
+            {next && <TaskCard data={taskCardData(task, next, true)} heading="h2" />}
           </aside>
         </div>
       </main>

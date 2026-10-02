@@ -119,7 +119,7 @@ export function TaskForm({
             role="tab"
             aria-selected={tab === t}
             onClick={() => setTab(t)}
-            className={cn("min-h-10 rounded-md text-sm font-medium", tab === t && "bg-card text-brand shadow-sm")}
+            className={cn("min-h-11 rounded-md text-sm font-medium", tab === t && "bg-card text-brand shadow-sm")}
           >
             {t === "form" ? "Edit" : "Preview"}
           </button>
@@ -268,7 +268,7 @@ export function TaskForm({
           <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
             Live preview · what volunteers see
           </p>
-          <TaskCard data={preview} />
+          <TaskCard data={preview} heading="h2" />
           <Button type="button" variant="outline" size="tap" className="mt-3 w-full lg:hidden" onClick={() => setTab("form")}>
             Back to editing
           </Button>

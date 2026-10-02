@@ -45,13 +45,22 @@ function Row({ icon, label, children }: { icon: React.ReactNode; label: string; 
 
 const dash = (s: string) => (s.trim() ? s : <span className="font-normal text-muted-foreground">—</span>);
 
-export function TaskCard({ data, className }: { data: TaskCardData; className?: string }) {
+export function TaskCard({
+  data,
+  className,
+  heading: Heading = "h1",
+}: {
+  data: TaskCardData;
+  className?: string;
+  /** Use "h2" when the page already has its own h1 (e.g. the live preview). */
+  heading?: "h1" | "h2";
+}) {
   const full = data.seatsLeft <= 0;
   return (
     <article className={cn("rounded-xl border bg-card", className)}>
       <header className="border-b p-4">
         <p className="text-xs font-semibold tracking-wide text-brand uppercase">{data.cause || "Cause"}</p>
-        <h1 className="mt-1 text-xl leading-snug font-bold text-balance">{data.title || "Task title"}</h1>
+        <Heading className="mt-1 text-xl leading-snug font-bold text-balance">{data.title || "Task title"}</Heading>
         <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
           <span>{data.orgName}</span>
           {data.orgVerified && <VerifiedNgoBadge />}
@@ -68,7 +77,7 @@ export function TaskCard({ data, className }: { data: TaskCardData; className?: 
                 href={data.mapUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="ml-2 inline-flex min-h-6 items-center text-brand underline underline-offset-2"
+                className="ml-2 inline-flex min-h-11 items-center text-brand underline underline-offset-2"
               >
                 Open map
               </a>

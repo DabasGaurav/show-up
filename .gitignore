@@ -44,3 +44,5 @@ next-env.d.ts
 # local embedded database
 .data
 .next-mvp
+.next-build
+.next-build-mvp
