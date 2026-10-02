@@ -46,7 +46,7 @@ describe("standby cover (F11)", () => {
     const offers = await listOffersForOccurrence(occ.id);
     expect(offers.map((o) => o.user_id)).toEqual([trusted.id, verified.id]); // Trusted first
     expect(offers.every((o) => o.expires_at.getTime() === hours(2, at).getTime())).toBe(true);
-    expect((await messages("standby_offer")).at(-1)!.payload.text).toMatch(/^A slot just opened: Sapling drive, .* First to accept gets it: /);
+    expect((await messages("standby_offer")).at(-1)!.payload.text).toMatch(/^A spot just opened! Sapling drive, .* First to say yes gets it: /);
 
     // Offering again does not duplicate.
     expect(await offerToStandby((await getBooking(b.booking.id))!, at, ORIGIN)).toBe(0);
@@ -105,7 +105,7 @@ describe("guaranteed response (F15)", () => {
     const report = await runJobs(hours(49, T0), ORIGIN);
     expect(report.extra.autoReleased).toBeGreaterThanOrEqual(1);
     expect((await getBooking(rc.booking.id))!.status).toBe("auto_released");
-    expect((await messages("request_auto_released")).at(-1)!.payload.text).toContain("didn't reply within 48 hours");
+    expect((await messages("request_auto_released")).at(-1)!.payload.text).toContain("hasn't replied about Sapling drive");
 
     // 2 of 3 answered within 48 hours.
     expect((await orgProfile(org.id, hours(50, T0)))!.responseRate).toBe(67);
@@ -130,7 +130,7 @@ describe("re-engagement nudges (F12)", () => {
     expect(nudge!.reason).toBe("lapsed");
     expect(nudge!.tasks.length).toBeLessThanOrEqual(3);
     expect(nudge!.tasks.every((t) => t.cause === "Plantation")).toBe(true);
-    expect(nudge!.text).toMatch(/^It's been a while! \d tasks? near you match(es)? Plantation\.$/);
+    expect(nudge!.text).toMatch(/^It's been a while! \d things? near you match(es)? Plantation\.$/);
 
     await snoozeNudge(user.id, T0, 7);
     expect(await nudgeFor(user, hours(24, T0))).toBeNull();

@@ -1,94 +1,125 @@
 import Link from "next/link";
-import { Building2, CalendarCheck, Check, HandHeart } from "lucide-react";
+import { BellRing, CalendarCheck, ClipboardList, Footprints, History, Lock, MapPinned, Quote, Undo2, UserCheck } from "lucide-react";
+import { HeroArt, PackingArt, ReadingArt } from "@/components/art";
+import { TrustTick } from "@/components/kit";
 import { SiteHeader } from "@/components/site-header";
 import { buttonVariants } from "@/components/ui/button";
-import { isEnabled } from "@/lib/flags";
-import { S } from "@/lib/strings";
 import { cn } from "@/lib/utils";
 
-const L = S.landing;
+const nav = "flex min-h-11 items-center rounded-full px-3 font-semibold text-primary hover:bg-primary-soft";
 
-function Points({ title, points, icon }: { title: string; points: readonly string[]; icon: React.ReactNode }) {
+function Points({ items }: { items: { icon: React.ReactNode; text: string }[] }) {
   return (
-    <section className="rounded-xl border bg-card p-5">
-      <h2 className="flex items-center gap-2 text-base font-semibold text-brand">
-        {icon}
-        {title}
-      </h2>
-      <ul className="mt-3 space-y-2 text-sm">
-        {points.map((p) => (
-          <li key={p} className="flex gap-2">
-            <Check className="mt-0.5 size-4 shrink-0 text-ok" aria-hidden />
-            <span>{p}</span>
-          </li>
-        ))}
-      </ul>
-    </section>
+    <ul className="mt-5 space-y-3">
+      {items.map((p) => (
+        <li key={p.text} className="flex items-center gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary [&>svg]:size-5" aria-hidden>{p.icon}</span>
+          <span className="font-medium">{p.text}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
+// Landing page (brief B2).
 export default function LandingPage() {
-  const hasFeed = isEnabled("F9");
   return (
     <>
-      <SiteHeader />
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-12">
-        <section className="py-10 sm:py-16">
-          <p className="text-sm font-medium text-brand">{L.eyebrow}</p>
-          <h1 className="mt-2 max-w-2xl text-3xl font-bold tracking-tight text-balance sm:text-5xl">
-            {L.title}
-          </h1>
-          <p className="mt-4 max-w-xl text-base text-muted-foreground">{S.pitch}</p>
-          <p className="mt-2 max-w-xl text-base text-muted-foreground">{L.lead}</p>
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <Link href="/ngo" className={cn(buttonVariants({ size: "tap" }), "sm:min-w-48")}>
-              <Building2 aria-hidden />
-              {L.ngoCta}
-            </Link>
-            <Link
-              href={hasFeed ? "/feed" : "#volunteer"}
-              className={cn(buttonVariants({ size: "tap", variant: "outline" }), "sm:min-w-48")}
-            >
-              <HandHeart aria-hidden />
-              {L.volunteerCta}
-            </Link>
+      <SiteHeader>
+        <Link href="/me" className={nav}>My plans</Link>
+      </SiteHeader>
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4">
+        <section className="grid items-center gap-8 pt-4 pb-10 sm:grid-cols-2 sm:pt-10 sm:pb-16">
+          <div>
+            <p className="font-semibold text-primary">Volunteering in your city</p>
+            <h1 className="hero-title mt-2 text-balance">Give a few hours. Make them count.</h1>
+            <p className="mt-4 max-w-md text-lg leading-7 text-ink-soft">
+              Real people, real causes, close to home, and NGOs who&apos;ll be glad you came.
+            </p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <Link href="/ngo" className={cn(buttonVariants({ size: "tap" }), "h-13 px-7")}>I run an NGO</Link>
+              <Link href="/me" className={cn(buttonVariants({ size: "tap", variant: "outline" }), "h-13 px-7")}>I&apos;m volunteering</Link>
+            </div>
+            <p className="mt-3 text-sm text-ink-soft italic">Got a link from an NGO? Just open it, that&apos;s all you need.</p>
+          </div>
+          <HeroArt className="w-full" />
+        </section>
+
+        <section aria-label="Why people trust Show-Up" className="grid gap-3 rounded-xl bg-card p-5 sm:grid-cols-3">
+          <p className="flex items-center gap-3 font-medium"><TrustTick className="size-7 [&>svg]:size-4" />Every NGO is checked by us</p>
+          <p className="flex items-center gap-3 font-medium">
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent-soft text-warn" aria-hidden><Lock className="size-4" /></span>
+            Your number stays private until you&apos;re confirmed
+          </p>
+          <p className="flex items-center gap-3 font-medium">
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary" aria-hidden><Undo2 className="size-4" /></span>
+            Plans change. Telling them takes one tap.
+          </p>
+        </section>
+
+        <section className="grid items-center gap-8 py-14 sm:grid-cols-2">
+          <PackingArt className="w-full" />
+          <div>
+            <h2 className="text-3xl leading-9">Know who&apos;s really coming.</h2>
+            <p className="mt-3 text-ink-soft">Post a need in two minutes and share one link in your WhatsApp group.</p>
+            <p className="mt-2 text-ink-soft">See who&apos;s coming and who can&apos;t make it, before the day, not on it.</p>
+            <Points
+              items={[
+                { icon: <ClipboardList />, text: "Clear details, so no more explaining on calls" },
+                { icon: <BellRing />, text: "Reminders go out for you" },
+                { icon: <History />, text: "See who's shown up before" },
+              ]}
+            />
+            <Link href="/ngo" className={cn(buttonVariants({ size: "tap" }), "mt-6")}>Post your first need</Link>
           </div>
         </section>
 
-        {!hasFeed && (
-          <section id="volunteer" className="mb-6 scroll-mt-4 rounded-xl border border-brand/20 bg-info-soft p-5">
-            <h2 className="text-base font-semibold text-brand">{L.mvpVolunteerTitle}</h2>
-            <p className="mt-1 text-sm">{L.mvpVolunteerBody}</p>
-            <Link href="/me" className={cn(buttonVariants({ size: "tap", variant: "outline" }), "mt-3 bg-card")}>
-              <CalendarCheck aria-hidden />
-              {L.myBookings}
-            </Link>
-          </section>
-        )}
+        <section className="grid items-center gap-8 pb-14 sm:grid-cols-2">
+          <div className="order-2 sm:order-1">
+            <h2 className="text-3xl leading-9">Show up for something real.</h2>
+            <p className="mt-3 text-ink-soft">Everything you need on one card: when, where, what you&apos;ll do.</p>
+            <p className="mt-2 text-ink-soft">Can&apos;t make it after all? Free up your spot in one tap, and someone else gets to go.</p>
+            <Points
+              items={[
+                { icon: <MapPinned />, text: "Exact time, place and role, upfront" },
+                { icon: <BellRing />, text: "Friendly reminders, no spam" },
+                { icon: <UserCheck />, text: "Your track record travels with you" },
+              ]}
+            />
+            <Link href="/me" className={cn(buttonVariants({ size: "tap" }), "mt-6")}>See my plans</Link>
+          </div>
+          <ReadingArt className="order-1 w-full sm:order-2" />
+        </section>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Points title={L.ngoTitle} points={L.ngoPoints} icon={<Building2 className="size-5" aria-hidden />} />
-          <Points
-            title={L.volunteerTitle}
-            points={L.volunteerPoints}
-            icon={<HandHeart className="size-5" aria-hidden />}
-          />
-        </div>
+        <section aria-label="What NGOs told us" className="rounded-xl bg-accent-soft p-5 sm:p-10">
+          <p className="text-sm font-semibold tracking-wide text-warn uppercase">What NGOs told us</p>
+          <blockquote className="mt-3">
+            <Quote className="size-7 text-accent" aria-hidden />
+            <p className="font-heading mt-2 text-lg leading-7 font-semibold sm:text-3xl sm:leading-10">
+              &ldquo;Maybe one in ten people actually tell me they can&apos;t continue.&rdquo;
+            </p>
+            <footer className="mt-3 text-sm text-ink-soft italic">An NGO founder we spoke to while building Show-Up</footer>
+          </blockquote>
+          <p className="mt-5 text-lg font-semibold">That&apos;s what we&apos;re here to fix.</p>
+        </section>
 
-        <section className="mt-10">
-          <h2 className="text-xl font-semibold">{L.howTitle}</h2>
-          <ol className="mt-4 grid gap-4 sm:grid-cols-3">
-            {L.steps.map((s, i) => (
-              <li key={s.title} className="rounded-xl border bg-card p-5">
-                <span className="flex size-8 items-center justify-center rounded-full bg-brand text-sm font-semibold text-white">
-                  {i + 1}
+        <section className="py-14">
+          <h2 className="text-3xl leading-9">How it works</h2>
+          <ol className="mt-6 grid gap-4 sm:grid-cols-3">
+            {[
+              { icon: <CalendarCheck />, text: "Pick a spot that fits" },
+              { icon: <BellRing />, text: "Say “yes” the day before" },
+              { icon: <Footprints />, text: "Show up, and it counts" },
+            ].map((s, i) => (
+              <li key={s.text} className="flex items-center gap-4 rounded-xl bg-card p-5">
+                <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-accent text-ink [&>svg]:size-6" aria-hidden>{s.icon}</span>
+                <span className="font-heading text-lg leading-6 font-semibold">
+                  <span className="sr-only">Step {i + 1}: </span>
+                  {s.text}
                 </span>
-                <h3 className="mt-3 font-semibold">{s.title}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{s.body}</p>
               </li>
             ))}
           </ol>
-          <p className="mt-4 rounded-lg bg-muted px-4 py-3 text-sm">{S.rules.release}</p>
         </section>
       </main>
     </>

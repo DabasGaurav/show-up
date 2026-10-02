@@ -41,7 +41,7 @@ export async function runJobs(now: Date, origin: string): Promise<JobReport> {
   )) {
     const b = (await getBooking(id))!;
     const link = `${origin}/c/${b.confirm_token}`;
-    await messageVolunteer(b, "confirmation_request", MSG.confirmationRequest({ ...messageTask(b), link }), {
+    await messageVolunteer(b, "confirmation_request", MSG.confirmationRequest({ ...messageTask(b), firstName: b.user_name.split(" ")[0], link }), {
       link, whatsappQueue: true, dueAt: dueAt(b, RULES.confirmRequestHours),
     });
     report.awaiting++;

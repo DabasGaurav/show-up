@@ -41,3 +41,23 @@ export const MIN_TRUST_LABEL = {
   verified: "Verified volunteers",
   trusted: "Trusted volunteers",
 } as const;
+
+/** How each cause is shown: friendly label and chip colour (Redesign brief A2, C1). */
+export const CAUSE_UI: Record<string, { label: string; color: string }> = {
+  Teaching: { label: "Teaching", color: "var(--cause-teaching)" },
+  Plantation: { label: "Trees & green", color: "var(--cause-green)" },
+  "Food distribution": { label: "Food", color: "var(--cause-food)" },
+  "Animal welfare": { label: "Animals", color: "var(--cause-animals)" },
+  "Health camps": { label: "Health", color: "var(--cause-health)" },
+  "Elderly care": { label: "Elders", color: "var(--cause-elderly)" },
+  "Disaster relief": { label: "Relief", color: "var(--cause-health)" },
+  "Skill-based": { label: "Skills & online", color: "var(--cause-skills)" },
+};
+export const causeUi = (cause: string) => CAUSE_UI[cause] ?? { label: cause, color: "var(--primary-soft)" };
+
+export const RELEASE_REASON_LABEL = {
+  work: "Work came up",
+  health: "Not well",
+  travel: "Travelling",
+  other: "Something else",
+} as const;

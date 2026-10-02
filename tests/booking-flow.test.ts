@@ -23,7 +23,7 @@ describe("confirm-and-release loop (F3, F4)", () => {
     if (!res.ok) return;
     expect(res.booking.status).toBe("booked");
     const [confirmedMsg] = await messages("booking_confirmed");
-    expect(confirmedMsg.payload.text).toContain("You're booked: Sapling drive with");
+    expect(confirmedMsg.payload.text).toMatch(/^You're in for Sapling drive with .* on \w{3}, \d+ \w{3} at \d+:\d\d [ap]m\. 🙌 We'll check in with you on \w{3}, \d+ \w{3}\. Plans change\? Free up your spot here: /);
     expect(confirmedMsg.payload.text).toContain(`${ORIGIN}/c/${res.booking.confirm_token}`);
 
     // Nothing is due before T−48h.
@@ -48,7 +48,7 @@ describe("confirm-and-release loop (F3, F4)", () => {
     expect((await runJobs(hours(-3, start), ORIGIN)).dayOf).toBe(1);
     expect((await runJobs(hours(-2, start), ORIGIN)).dayOf).toBe(0);
     const [dayOf] = await messages("day_of_reminder");
-    expect(dayOf.payload.text).toMatch(/^Today: Sapling drive at .*Hill Road Park.*Contact: Asha.*Done means: Fifty saplings/);
+    expect(dayOf.payload.text).toMatch(/^Today! Sapling drive at .*Hill Road Park.*Ask for Asha.*You're done when: Fifty saplings.*Thank you for showing up\. 💛$/);
   });
 
   it("stops asking once the volunteer confirms", async () => {
@@ -109,9 +109,9 @@ describe("confirm-and-release loop (F3, F4)", () => {
     // The NGO was told about each release.
     const alerts = await messages("ngo_release_alert");
     expect(alerts.length).toBeGreaterThanOrEqual(2);
-    expect(alerts[0].payload.text).toMatch(/released their slot for Sapling drive \(.*\)\. Turnout: \d\/2\./);
+    expect(alerts.some((a) => /^Volunteer can't make it to Sapling drive \(work came up\)\. \d of 2 coming\. We're on it\.$/.test(a.payload.text))).toBe(true);
     const receipts = await messages("release_receipt");
-    expect(receipts.some((r) => r.payload.text.startsWith("Released. Thanks for telling"))).toBe(true);
+    expect(receipts.some((r) => r.payload.text.startsWith("All sorted, your spot is free for someone else."))).toBe(true);
   });
 
   it("refuses a booking once the slot has started", async () => {

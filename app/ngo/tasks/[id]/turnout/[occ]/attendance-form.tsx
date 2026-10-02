@@ -1,8 +1,10 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Check, X } from "lucide-react";
 import { Field, FormError, TextInput } from "@/components/forms/field";
+import { Avatar } from "@/components/kit";
+import { toast } from "@/components/toaster";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { saveAttendanceAction, type AttendanceState } from "./actions";
@@ -13,25 +15,14 @@ export interface AttendanceRow {
   mark: "attended" | "no_show" | null;
 }
 
-/** Attendance marking mode: tap to toggle Attended / No-show per person, then save (F5). */
-export function AttendanceForm({
-  taskId,
-  occurrenceId,
-  rows,
-  chasingMinutes,
-}: {
-  taskId: string;
-  occurrenceId: string;
-  rows: AttendanceRow[];
-  chasingMinutes: number | null;
-}) {
+/** "Mark who came": a big tick and cross on each row, then Save (brief B10). */
+export function AttendanceForm({ taskId, occurrenceId, rows, chasingMinutes }: { taskId: string; occurrenceId: string; rows: AttendanceRow[]; chasingMinutes: number | null }) {
   const [state, action, pending] = useActionState<AttendanceState, FormData>(saveAttendanceAction, {});
-  const [marks, setMarks] = useState<Record<string, "attended" | "no_show" | null>>(
-    Object.fromEntries(rows.map((r) => [r.bookingId, r.mark])),
-  );
+  const [marks, setMarks] = useState<Record<string, "attended" | "no_show" | null>>(Object.fromEntries(rows.map((r) => [r.bookingId, r.mark])));
   const unmarked = rows.filter((r) => marks[r.bookingId] === null).length;
-  const toggle = (id: string) =>
-    setMarks((m) => ({ ...m, [id]: m[id] === "attended" ? "no_show" : "attended" }));
+  useEffect(() => {
+    if (state.saved) toast("Thanks! Everyone's track record is updated.");
+  }, [state]);
 
   return (
     <form action={action} className="space-y-4">
@@ -40,60 +31,34 @@ export function AttendanceForm({
       <ul className="space-y-2">
         {rows.map((r) => {
           const mark = marks[r.bookingId];
+          const set = (m: "attended" | "no_show") => setMarks((prev) => ({ ...prev, [r.bookingId]: m }));
           return (
-            <li key={r.bookingId}>
+            <li key={r.bookingId} className={cn("flex items-center gap-3 rounded-xl border p-2 pl-3", mark === "attended" && "border-ok bg-ok-soft", mark === "no_show" && "border-gap bg-gap-soft")}>
               <input type="hidden" name={`mark_${r.bookingId}`} value={mark ?? ""} />
-              <button
-                type="button"
-                onClick={() => toggle(r.bookingId)}
-                aria-label={`${r.name}: ${mark === "attended" ? "Attended" : mark === "no_show" ? "No-show" : "Not marked"}. Tap to change.`}
-                className={cn(
-                  "flex min-h-14 w-full items-center justify-between gap-3 rounded-xl border px-4 text-left",
-                  mark === "attended" && "border-ok bg-ok-soft",
-                  mark === "no_show" && "border-gap bg-gap-soft",
-                  mark === null && "bg-card",
-                )}
-              >
-                <span className="font-medium">{r.name}</span>
-                <span
-                  className={cn(
-                    "flex items-center gap-1.5 text-sm font-semibold",
-                    mark === "attended" && "text-ok",
-                    mark === "no_show" && "text-gap",
-                    mark === null && "text-muted-foreground",
-                  )}
-                >
-                  {mark === "attended" && <Check className="size-4" aria-hidden />}
-                  {mark === "no_show" && <X className="size-4" aria-hidden />}
-                  {mark === "attended" ? "Attended" : mark === "no_show" ? "No-show" : "Tap to mark"}
-                </span>
+              <Avatar name={r.name} className="size-9" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-semibold">{r.name}</span>
+                <span className="text-sm text-ink-soft">{mark === "attended" ? "Came" : mark === "no_show" ? "Didn't come" : "Not marked yet"}</span>
+              </span>
+              <button type="button" aria-label={`${r.name} came`} aria-pressed={mark === "attended"} onClick={() => set("attended")} className={cn("flex size-12 items-center justify-center rounded-full border bg-card", mark === "attended" && "border-ok bg-ok text-white")}>
+                <Check aria-hidden />
+              </button>
+              <button type="button" aria-label={`${r.name} didn't come`} aria-pressed={mark === "no_show"} onClick={() => set("no_show")} className={cn("flex size-12 items-center justify-center rounded-full border bg-card", mark === "no_show" && "border-gap bg-gap text-white")}>
+                <X aria-hidden />
               </button>
             </li>
           );
         })}
       </ul>
-      <div className="flex flex-wrap gap-2">
-        <Button type="button" variant="outline" size="tap" onClick={() => setMarks(Object.fromEntries(rows.map((r) => [r.bookingId, "attended" as const])))}>
-          Mark all attended
-        </Button>
-      </div>
-      <Field label="Minutes spent chasing volunteers for this event" htmlFor="chasing_minutes" optional>
+      <Button type="button" variant="outline" size="tap" onClick={() => setMarks(Object.fromEntries(rows.map((r) => [r.bookingId, "attended" as const])))}>
+        Everyone came
+      </Button>
+      <Field label="Minutes you spent chasing people for this one" htmlFor="chasing_minutes" optional>
         <TextInput id="chasing_minutes" name="chasing_minutes" type="number" inputMode="numeric" min={0} max={2000} defaultValue={chasingMinutes ?? ""} className="max-w-40" />
       </Field>
       <FormError message={state.error} />
-      {state.saved && (
-        <p role="status" className="rounded-lg bg-ok-soft px-3 py-2 text-sm font-medium text-ok">
-          Attendance saved. Reliability records are updated.
-        </p>
-      )}
-      <Button type="submit" size="tap" className="w-full" disabled={pending}>
-        {pending ? "Saving…" : "Save attendance"}
-      </Button>
-      {unmarked > 0 && (
-        <p className="text-xs text-muted-foreground">
-          {unmarked} not marked yet. Anyone left unmarked 72 hours after the start is saved as “Not recorded”.
-        </p>
-      )}
+      <Button type="submit" size="tap" className="h-14 w-full text-lg" disabled={pending}>{pending ? "Saving…" : "Save"}</Button>
+      {unmarked > 0 && <p className="text-sm text-ink-soft">{unmarked} still to mark.</p>}
     </form>
   );
 }

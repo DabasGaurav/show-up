@@ -112,3 +112,34 @@ modes.
 - **Secrets** (session secret, admin passcode, cron secret) are in the gitignored `.env.hosted-mvp`.
 - **Not set yet:** `RESEND_API_KEY` / `EMAIL_FROM`. Until then sign-in codes are not delivered.
 - **Prototype is not hosted**; it runs locally.
+
+## Redesign, copy and demo mode (2 Oct 2026) — brief in [REDESIGN_BRIEF.md](REDESIGN_BRIEF.md)
+
+**Part A, visual design.** New tokens in `app/globals.css` (cream, deep teal, marigold; Fraunces headings, Inter
+body; 16px cards, pill buttons; one card shadow; nothing below 14px). Signature components in `components/kit.tsx`
+(trust tick, track-record dots, who's-coming bar, date block, cause chips, level marks), `activity-card.tsx`,
+`sheet.tsx` (bottom sheet), `toaster.tsx`, `confetti.tsx`, and illustrations in `art.tsx`.
+
+**Part B, copy.** Every live screen rewritten: landing, sign in, activity page with the save-my-spot sheet,
+check-in page with the free-up-my-spot sheet, My plans, NGO onboarding (three steps), Post a need, the link
+screen, the NGO dashboard, Who's coming and Mark who came. All messages in `lib/messages.ts` follow B11.
+Status wording lives in `lib/labels.ts`. Deadlines are always shown as a real day and time.
+
+**Part C, demo mode.** `/demo` and its pages run on `lib/demo/data.json` (Part E data). What a tester does is kept
+only in their own browser; `/demo/reset` clears it.
+
+### Decisions and things worth knowing
+
+- **Data model, rules and routes are unchanged.** `/t/{slug}/book` still exists but now just opens the sheet on
+  the activity page. Two routes were added: `/privacy` (footer links) and the `/demo` pages.
+- **Illustrations are drawn in code** (simple SVG people in the palette), not Open Peeps or stock photos.
+- **"Tell me if a spot opens"** adds the person to the standby list in the admin console.
+- **Trust tick** shows for NGOs whose registration the team has marked as checked in `/admin`.
+- **NGO sign-up asks for the person's role;** it is remembered and prefilled in "Post a need".
+- **Who's coming** has a fourth group, "saved a spot": people who joined but have not been asked to confirm yet.
+  Calling them "not heard back" before we have asked would be wrong.
+- **One demo NGO is not from the research:** "Naya Savera Group" was added so the SH2 comparison has two
+  unchecked NGOs (Part E lists only one). It is flagged `notFromResearch` in the data file.
+- **Demo reviews:** Part E gives three reviews, so each checked NGO page shows two of those three.
+- **Not rewritten:** the admin console and the older database-backed prototype pages (`APP_MODE=prototype`: feed,
+  Test Lab and so on). They pick up the new colours and fonts but keep their earlier wording.

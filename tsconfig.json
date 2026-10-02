@@ -37,8 +37,6 @@
     "**/*.mts",
     ".next-mvp/types/**/*.ts",
     ".next-mvp/dev/types/**/*.ts",
-    ".next-build/types/**/*.ts",
-    ".next-build/dev/types/**/*.ts",
     ".next-build-mvp/types/**/*.ts",
     ".next-build-mvp/dev/types/**/*.ts"
   ],

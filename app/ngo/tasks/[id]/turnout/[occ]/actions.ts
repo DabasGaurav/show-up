@@ -20,9 +20,9 @@ export async function saveAttendanceAction(_prev: AttendanceState, form: FormDat
   const occId = String(form.get("occurrence_id"));
   const { user, task } = await requireOrgTask(taskId);
   const occ = await getOccurrence(occId);
-  if (!occ || occ.task_id !== task.id) return { error: "Session not found." };
+  if (!occ || occ.task_id !== task.id) return { error: "We couldn't find that activity." };
   if (!canMarkAttendance(occ.start_at, await now())) {
-    return { error: "Attendance can be marked from the start of the session until 72 hours after." };
+    return { error: "You can mark who came once it starts, and for 3 days after." };
   }
 
   const bookings = await listBookingsForOccurrence(occId);

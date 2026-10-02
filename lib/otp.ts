@@ -71,11 +71,11 @@ export async function sendCode(phone: string, email: string | null): Promise<{ o
     return ok ? { ok } : { ok, error: "We couldn't send the code. Check the number and try again." };
   }
   const code = await storeCode(phone);
-  const text = `${code} is your Show-Up code. It is valid for ${TTL_MIN} minutes.`;
+  const text = `${code} is your Show-Up code. It works for ${TTL_MIN} minutes.`;
   if (method === "simulated") {
     await notify({ type: "otp", channel: "sms", to: phone, text });
   } else if (method === "email") {
-    if (!email) return { ok: false, error: "Enter your email so we can send your code." };
+    if (!email) return { ok: false, error: "Please add your email so we can send your code." };
     await notify({ type: "otp", channel: "email", to: email, text, subject: "Your Show-Up code" });
   } else {
     console.log(`[show-up] DEV phone check code for ${phone}: ${code}`);

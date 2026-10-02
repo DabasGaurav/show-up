@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 // Form primitives sized for touch: every control is at least 44px tall (PRD §12).
 
 export const controlClass =
-  "h-11 w-full rounded-lg border border-input bg-card px-3 text-base outline-none transition-colors " +
+  "h-12 w-full rounded-xl border border-input bg-card px-4 text-base outline-none transition-colors " +
   "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 " +
   "disabled:opacity-50 aria-invalid:border-gap";
 
@@ -34,7 +34,7 @@ export function Field({
       </label>
       {children}
       {hint && !error && !warning && <p className="text-xs text-muted-foreground">{hint}</p>}
-      {warning && !error && <p className="text-xs font-medium text-warn">Heads up: {warning}</p>}
+      {warning && !error && <p className="text-xs font-medium text-warn">{warning}</p>}
       {error && (
         <p role="alert" className="text-xs font-medium text-gap">
           {error}

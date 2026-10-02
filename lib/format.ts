@@ -12,10 +12,24 @@ const DATE = fmt({ weekday: "short", day: "numeric", month: "short", year: "nume
 const DATE_SHORT = fmt({ weekday: "short", day: "numeric", month: "short" });
 const TIME = fmt({ hour: "numeric", minute: "2-digit", hour12: true });
 const WEEKDAY = fmt({ weekday: "long" });
+const WEEKDAY_SHORT = fmt({ weekday: "short" });
+const DAY = fmt({ day: "numeric" });
+const MONTH = fmt({ month: "short" });
 
 export const fmtDate = (d: Date) => DATE.format(d).replace(/, (\d{4})$/, " $1");
 export const fmtDateShort = (d: Date) => DATE_SHORT.format(d);
-export const fmtTime = (d: Date) => TIME.format(d).replace("am", "AM").replace("pm", "PM");
+export const fmtTime = (d: Date) => TIME.format(d).toLowerCase();
+/** "9 am", "9:30 am" */
+export const fmtTimeShort = (d: Date) => fmtTime(d).replace(":00", "");
+/** "Fri, 9 am": how every deadline is shown (a real day and time, never a rule). */
+export const fmtDayTime = (d: Date) => `${WEEKDAY_SHORT.format(d)}, ${fmtTimeShort(d)}`;
+/** "Thu, 10 Oct" */
+export const fmtDayDate = (d: Date) => DATE_SHORT.format(d);
+export const fmtWeekdayShort = (d: Date) => WEEKDAY_SHORT.format(d);
+/** Parts for the marigold date block. */
+export function dateBlock(d: Date): { dow: string; day: string; mon: string } {
+  return { dow: WEEKDAY_SHORT.format(d), day: DAY.format(d), mon: MONTH.format(d) };
+}
 export const fmtTimeRange = (start: Date, end: Date) => `${fmtTime(start)} – ${fmtTime(end)}`;
 export const fmtDateTime = (d: Date) => `${fmtDateShort(d)}, ${fmtTime(d)}`;
 export const fmtWeekday = (d: Date) => WEEKDAY.format(d);

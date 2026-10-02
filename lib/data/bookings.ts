@@ -4,11 +4,13 @@ import type { User } from "@/lib/auth";
 import { query, queryOne } from "@/lib/db";
 import { track } from "@/lib/events";
 import { isEnabled, isPrototype } from "@/lib/flags";
-import { fmtDate, fmtDateTime, fmtPhone, fmtTime, mapLink } from "@/lib/format";
+import { fmtDayDate, fmtDayTime, fmtPhone, fmtTime, fmtWeekday, mapLink } from "@/lib/format";
 import { MSG } from "@/lib/messages";
 import { notify } from "@/lib/notify";
 import {
   ACTIVE_STATUSES,
+  HOUR_MS,
+  RULES,
   canBook,
   freeReleaseDeadline,
   initialBookingStatus,
@@ -21,7 +23,7 @@ import {
   type BookingStatus,
   type TrustLevel,
 } from "@/lib/rules";
-import type { ReleaseReason } from "@/lib/constants";
+import { RELEASE_REASON_LABEL, type ReleaseReason } from "@/lib/constants";
 import type { MinTrust } from "@/lib/rules";
 
 /** A booking joined with its occurrence, task and organisation. */
@@ -127,7 +129,7 @@ export async function currentLevel(user: Pick<User, "id" | "id_status">, now: Da
 }
 
 export function messageTask(b: Pick<BookingView, "title" | "org_name" | "start_at">) {
-  return { task: b.title, ngo: b.org_name, date: fmtDate(b.start_at), time: fmtTime(b.start_at) };
+  return { task: b.title, ngo: b.org_name, date: fmtDayDate(b.start_at), time: fmtTime(b.start_at), day: fmtWeekday(b.start_at) };
 }
 
 /**
@@ -150,7 +152,7 @@ export async function messageVolunteer(
   if (b.user_email) {
     await notify({
       type, channel: "email", text, to: b.user_email, userId: b.user_id, link: opts.link, dueAt: opts.dueAt,
-      subject: `${b.title} · ${fmtDateTime(b.start_at)}`, dedupeKey: key && `${key}:email`, meta,
+      subject: `${b.title} · ${fmtDayDate(b.start_at)}`, dedupeKey: key && `${key}:email`, meta,
     });
   }
   if (opts.whatsappQueue) {
@@ -168,7 +170,7 @@ export async function messageOrg(orgId: string, type: string, text: string, link
     if (isPrototype) {
       await notify({ type, channel: "whatsapp", text, to: m.phone, userId: m.id, link, dedupeKey: dedupeKey && `${dedupeKey}:${m.id}` });
     } else if (m.email) {
-      await notify({ type, channel: "email", text, to: m.email, userId: m.id, link, subject: "Show-Up update", dedupeKey: dedupeKey && `${dedupeKey}:${m.id}` });
+      await notify({ type, channel: "email", text, to: m.email, userId: m.id, link, subject: "A quick update from Show-Up", dedupeKey: dedupeKey && `${dedupeKey}:${m.id}` });
     }
   }
 }
@@ -257,7 +259,12 @@ export async function createBooking(i: BookInput): Promise<BookResult> {
     await messageVolunteer(
       booking,
       "booking_confirmed",
-      MSG.bookingConfirmed({ ...m, deadline: fmtDateTime(freeReleaseDeadline(booking.start_at)), link }),
+      MSG.bookingConfirmed({
+        ...m,
+        link,
+        // Someone who joins inside two days is confirmed straight away: no check-in.
+        checkIn: status === "booked" ? fmtDayDate(new Date(booking.start_at.getTime() - RULES.confirmRequestHours * HOUR_MS)) : null,
+      }),
       { link },
     );
   }
@@ -303,14 +310,20 @@ export async function releaseBooking(
   await messageVolunteer(
     b,
     "release_receipt",
-    type === "released_early" ? MSG.releaseReceipt({ ngo: b.org_name }) : MSG.lateReleaseReceipt({ ngo: b.org_name }),
+    MSG.releaseReceipt({ ngo: b.org_name }),
   );
   if (b.status !== "requested") {
     const t = await occurrenceTurnout(b.occurrence_id, b.slots_needed);
     await messageOrg(
       b.org_id,
       "ngo_release_alert",
-      MSG.ngoReleaseAlert({ name: b.user_name, task: b.title, date: fmtDate(b.start_at), confirmed: t.confirmed, needed: t.needed }),
+      MSG.ngoReleaseAlert({
+        name: b.user_name.split(" ")[0],
+        task: b.title,
+        reason: reason ? RELEASE_REASON_LABEL[reason].toLowerCase() : null,
+        coming: t.confirmed,
+        needed: t.needed,
+      }),
       undefined,
       `ngo_release_alert:${b.id}`,
     );
@@ -335,7 +348,7 @@ export function placeOrLink(b: BookingView): string {
   return `${[b.address, b.city].filter(Boolean).join(", ")} (${mapLink(b.lat, b.lng, b.address)})`;
 }
 
-export const contactLine = (b: BookingView) => `${b.contact_name}, ${fmtPhone(b.contact_phone)}`;
+export const contactLine = (b: BookingView) => `${b.contact_name} (${fmtPhone(b.contact_phone)})`;
 
 /**
  * Attendance marking (F5, §5.4): from slot start until 72h after, the NGO marks each
@@ -401,7 +414,7 @@ export async function decideRequest(
   await messageVolunteer(
     b,
     "request_accepted",
-    MSG.requestAccepted({ ...m, deadline: fmtDateTime(freeReleaseDeadline(b.start_at)), link }),
+    MSG.requestAccepted({ ...m, link, freeBy: freeReleaseDeadline(b.start_at).getTime() > now.getTime() ? fmtDayTime(freeReleaseDeadline(b.start_at)) : null }),
     { link },
   );
   return { ok: true };

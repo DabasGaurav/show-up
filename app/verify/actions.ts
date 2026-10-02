@@ -5,7 +5,7 @@ import { safeNext, signIn, signOut } from "@/lib/auth";
 import { query, queryOne } from "@/lib/db";
 import { isEnabled, isMvp } from "@/lib/flags";
 import { normalisePhone } from "@/lib/format";
-import { sendCode, verifyCode } from "@/lib/otp";
+import { authMethod, sendCode, verifyCode } from "@/lib/otp";
 
 export interface VerifyState {
   step: "details" | "code";
@@ -22,15 +22,20 @@ export async function verifyAction(prev: VerifyState, form: FormData): Promise<V
 
   if (intent === "back") return { ...prev, step: "details", error: undefined };
 
+  if (intent === "resend") {
+    const sent = await sendCode(prev.phone, prev.email || null);
+    return { ...prev, step: "code", error: sent.ok ? undefined : sent.error };
+  }
+
   if (intent === "send") {
     const name = str(form.get("name"));
     const email = str(form.get("email")).toLowerCase();
     const phone = normalisePhone(str(form.get("phone")));
     const state: VerifyState = { step: "details", name, phone: str(form.get("phone")), email };
-    if (name.length < 2) return { ...state, error: "Enter your name." };
-    if (!phone) return { ...state, error: "Enter a 10-digit Indian mobile number." };
+    if (name.length < 2) return { ...state, error: "Please add your name." };
+    if (!phone) return { ...state, error: "That number doesn't look right. It should have 10 digits." };
     // MVP1 needs an email for reminders (§5.2).
-    if (isMvp && !/^\S+@\S+\.\S+$/.test(email)) return { ...state, error: "Enter your email for reminders." };
+    if (isMvp && !/^\S+@\S+\.\S+$/.test(email)) return { ...state, error: "Please add your email. We only use it for reminders." };
     const sent = await sendCode(phone, email || null);
     if (!sent.ok) return { ...state, error: sent.error };
     return { step: "code", name, phone, email };
@@ -39,7 +44,7 @@ export async function verifyAction(prev: VerifyState, form: FormData): Promise<V
   // intent === "verify"
   const code = str(form.get("code"));
   if (!(await verifyCode(prev.phone, code))) {
-    return { ...prev, step: "code", error: "That code didn't match. Enter the 6 digits we sent." };
+    return { ...prev, step: "code", error: `That code didn't work. Check the ${authMethod() === "email" ? "email" : "SMS"} and try again.` };
   }
   const existing = await queryOne<{ id: string }>("select id from users where phone = $1", [prev.phone]);
   let userId = existing?.id;
@@ -60,10 +65,11 @@ export async function verifyAction(prev: VerifyState, form: FormData): Promise<V
   await signIn(userId);
   const next = safeNext(str(form.get("next")));
   // Prototype: new volunteers continue to Step B (ID), which they can skip.
-  redirect(isEnabled("F8") && !existing ? `/verify/id?next=${encodeURIComponent(next)}` : next);
+  const dest = `${next}${next.includes("?") ? "&" : "?"}toast=in`;
+  redirect(isEnabled("F8") && !existing ? `/verify/id?next=${encodeURIComponent(dest)}` : dest);
 }
 
 export async function signOutAction(): Promise<void> {
   await signOut();
-  redirect("/");
+  redirect("/?toast=out");
 }

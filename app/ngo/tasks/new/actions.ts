@@ -21,29 +21,29 @@ export async function publishTaskAction(_prev: TaskFormState, form: FormData): P
   const f = (k: string) => str(form.get(k));
   const errors: Record<string, string> = {};
   const need = (k: string, label: string, min = 1) => {
-    if (f(k).length < min) errors[k] = `Enter ${label}.`;
+    if (f(k).length < min) errors[k] = `Please add ${label}.`;
   };
 
   // Every field except approval mode is required (§6.1 Screen 7).
-  if (!(CAUSES as readonly string[]).includes(f("cause"))) errors.cause = "Choose a cause.";
+  if (!(CAUSES as readonly string[]).includes(f("cause"))) errors.cause = "Pick a cause.";
   need("title", "a title", 4);
-  need("role", "the volunteer's role", 2);
-  need("done_definition", "what “done” means", 3);
+  need("role", "what volunteers will do", 2);
+  need("done_definition", "how you'll know it's done", 3);
 
   const start = istToDate(f("date"), f("start_time"));
   const end = istToDate(f("date"), f("end_time"));
-  if (Number.isNaN(start.getTime())) errors.date = "Choose a date and start time.";
-  else if (start.getTime() <= (await now()).getTime()) errors.date = "Choose a date and time in the future.";
-  if (Number.isNaN(end.getTime())) errors.end_time = "Choose an end time.";
-  else if (end.getTime() <= start.getTime()) errors.end_time = "The end time must be after the start time.";
+  if (Number.isNaN(start.getTime())) errors.date = "Pick a date and a start time.";
+  else if (start.getTime() <= (await now()).getTime()) errors.date = "That time has already passed. Pick a later one.";
+  if (Number.isNaN(end.getTime())) errors.end_time = "Pick an end time.";
+  else if (end.getTime() <= start.getTime()) errors.end_time = "The end needs to be after the start.";
 
   const commitment = f("commitment") === "recurring" ? "recurring" : "one_off";
   const rule = f("recurrence_rule");
   const occurrences = Number(f("occurrences"));
   if (commitment === "recurring") {
-    if (!(rule in RECURRENCE)) errors.recurrence_rule = "Choose how often it repeats.";
+    if (!(rule in RECURRENCE)) errors.recurrence_rule = "Pick how often it repeats.";
     if (!Number.isInteger(occurrences) || occurrences < 2 || occurrences > 26) {
-      errors.occurrences = "Enter the number of sessions (2 to 26).";
+      errors.occurrences = "Between 2 and 26 times.";
     }
   }
 
@@ -51,24 +51,24 @@ export async function publishTaskAction(_prev: TaskFormState, form: FormData): P
   const lat = Number(f("lat"));
   const lng = Number(f("lng"));
   if (mode === "onsite") {
-    if (!CITY_NAMES.includes(f("city"))) errors.city = "Choose a city.";
+    if (!CITY_NAMES.includes(f("city"))) errors.city = "Pick a city.";
     need("address", "the address", 6);
-    if (!f("lat") || !f("lng") || Number.isNaN(lat) || Number.isNaN(lng)) errors.address ??= "Drop a pin on the map.";
+    if (!f("lat") || !f("lng") || Number.isNaN(lat) || Number.isNaN(lng)) errors.address ??= "Tap the map to drop a pin.";
   } else if (!/^https?:\/\/\S+\.\S+/.test(f("online_link"))) {
-    errors.online_link = "Enter the meeting link, starting with https://";
+    errors.online_link = "Please add the link. It starts with https://";
   }
 
   const slots = Number(f("slots_needed"));
-  if (!Number.isInteger(slots) || slots < 1 || slots > 500) errors.slots_needed = "Enter how many volunteers you need.";
+  if (!Number.isInteger(slots) || slots < 1 || slots > 500) errors.slots_needed = "Tell us how many people you need.";
 
-  need("contact_name", "the contact's name", 2);
-  need("contact_role", "the contact's role", 2);
+  need("contact_name", "their name", 2);
+  need("contact_role", "their role", 2);
   const phone = normalisePhone(f("contact_phone"));
-  if (!phone) errors.contact_phone = "Enter a 10-digit Indian mobile number.";
+  if (!phone) errors.contact_phone = "That number doesn't look right. It should have 10 digits.";
 
   if (Object.keys(errors).length > 0) {
     await track("lab_validation_error", { fields: Object.keys(errors) }, user.id);
-    return { errors, message: "Some details are missing. Check the highlighted fields." };
+    return { errors, message: "A few details are missing. They're marked above." };
   }
 
   // Minimum trust level (F14) and approval mode (F15) exist only in the prototype.
@@ -111,5 +111,5 @@ export async function publishTaskAction(_prev: TaskFormState, form: FormData): P
     },
     user.id,
   );
-  redirect(`/ngo/tasks/${task.id}?published=1`);
+  redirect(`/ngo/tasks/${task.id}?published=1&toast=posted`);
 }

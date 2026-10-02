@@ -161,7 +161,7 @@ describe("Test Lab scenarios (§9)", () => {
     expect(Math.round(((await now()).getTime() - user.last_active_at.getTime()) / DAY_MS)).toBe(45);
     const nudge = await nudgeFor(user, await now());
     expect(nudge).not.toBeNull();
-    expect(nudge!.text).toBe("It's been a while! 3 tasks near you match Teaching and Plantation.");
+    expect(nudge!.text).toBe("It's been a while! 3 things near you match Teaching and Plantation.");
     // NGOs the volunteer attended before come first.
     expect(nudge!.tasks[0].org_name).toBe("Akshar Learning Circle");
 
@@ -211,7 +211,7 @@ describe("Test Lab scenarios (§9)", () => {
     const bad = await publishTaskAction({}, form({ ...fields, title: "" }));
     expect(bad.errors).toHaveProperty("title");
     const to = await act(() => publishTaskAction({}, form(fields)));
-    expect(to).toMatch(/^\/ngo\/tasks\/[0-9a-f-]{36}\?published=1$/);
+    expect(to).toMatch(/^\/ngo\/tasks\/[0-9a-f-]{36}\?published=1&toast=posted$/);
 
     const o = await finish(session);
     expect(o.suggested).toBe("Pass");

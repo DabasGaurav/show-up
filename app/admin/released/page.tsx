@@ -4,7 +4,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { isAdmin } from "@/lib/auth";
 import { listReleasedSeats, manualStandby } from "@/lib/data/queues";
 import { isMvp } from "@/lib/flags";
-import { fmtDate, fmtDateTime, fmtPhone, fmtTime, waLink } from "@/lib/format";
+import { fmtDateTime, fmtDayDate, fmtPhone, fmtTime, waLink } from "@/lib/format";
 import { MSG } from "@/lib/messages";
 import { siteUrl } from "@/lib/site";
 import { tick } from "@/lib/tick";
@@ -33,7 +33,7 @@ export default async function ReleasedSlotsPage() {
         <ul className="mt-4 space-y-3">
           {open.map((s) => {
             const offer = MSG.standbyOffer({
-              task: s.title, ngo: s.org_name, date: fmtDate(s.start_at), time: fmtTime(s.start_at),
+              task: s.title, ngo: s.org_name, date: fmtDayDate(s.start_at), time: fmtTime(s.start_at), day: "",
               link: `${origin}/t/${s.share_slug}?o=${s.occurrence_id}`,
             });
             return (

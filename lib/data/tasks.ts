@@ -151,3 +151,41 @@ export async function listTasksForOrg(orgId: string, now: Date): Promise<OrgTask
     [orgId, now],
   );
 }
+
+/** One date of an activity with the head-counts the NGO dashboard shows. */
+export interface OrgSession {
+  occurrence_id: string;
+  task_id: string;
+  title: string;
+  cause: string;
+  start_at: Date;
+  end_at: Date;
+  slots_needed: number;
+  coming: number;
+  saved: number;
+  waiting: number;
+  freed: number;
+  came: number;
+  missed: number;
+  unmarked: number;
+}
+
+export async function listOrgSessions(orgId: string): Promise<OrgSession[]> {
+  return query<OrgSession>(
+    `select oc.id as occurrence_id, t.id as task_id, t.title, t.cause, oc.start_at, oc.end_at, t.slots_needed,
+            count(b.id) filter (where b.status = 'confirmed')::int as coming,
+            count(b.id) filter (where b.status = 'booked')::int as saved,
+            count(b.id) filter (where b.status = 'awaiting_confirmation')::int as waiting,
+            count(b.id) filter (where b.status in ('released_early','released_late'))::int as freed,
+            count(b.id) filter (where b.status = 'attended')::int as came,
+            count(b.id) filter (where b.status = 'no_show')::int as missed,
+            count(b.id) filter (where b.status in ('booked','awaiting_confirmation','confirmed'))::int as unmarked
+     from task_occurrences oc
+     join tasks t on t.id = oc.task_id
+     left join bookings b on b.occurrence_id = oc.id
+     where t.org_id = $1
+     group by oc.id, t.id
+     order by oc.start_at`,
+    [orgId],
+  );
+}
