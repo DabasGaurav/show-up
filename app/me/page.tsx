@@ -8,7 +8,8 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
 import { bookingFacts, isActive, listBookingsForUser } from "@/lib/data/bookings";
 import { isEnabled } from "@/lib/flags";
-import { reliabilityRecord, reliabilityString, trustLevel } from "@/lib/rules";
+import { fmtDate } from "@/lib/format";
+import { pausedUntil, reliabilityRecord, reliabilityString, trustLevel } from "@/lib/rules";
 import { S } from "@/lib/strings";
 import { tick } from "@/lib/tick";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,7 @@ export default async function MyBookingsPage(props: PageProps<"/me">) {
     .reverse();
   const past = bookings.filter((b) => !upcoming.includes(b));
   const justBooked = bookings.find((b) => b.id === booked);
+  const paused = pausedUntil(facts, at);
 
   return (
     <>
@@ -53,6 +55,16 @@ export default async function MyBookingsPage(props: PageProps<"/me">) {
             <span className="text-muted-foreground">Reliability record: </span>
             <span className="font-medium">{reliabilityString(reliabilityRecord(facts))}</span>
           </p>
+          {isEnabled("F13") && paused && (
+            <p role="status" className="mt-3 rounded-lg bg-gap-soft px-3 py-2 text-sm text-gap">
+              <strong>Paused until {fmtDate(paused)}.</strong> {S.rules.consequence} You can still book tasks open to everyone.
+            </p>
+          )}
+          {isEnabled("F8") && user.id_status !== "approved" && (
+            <Link href="/verify/id?next=/me" className={cn(buttonVariants({ size: "tap", variant: "outline" }), "mt-3 w-full")}>
+              {user.id_status === "pending" ? "ID under review" : "Get Verified"}
+            </Link>
+          )}
           {isEnabled("F16") && (
             <Link href="/me/profile" className={cn(buttonVariants({ size: "tap", variant: "outline" }), "mt-3 w-full")}>
               {S.nav.profile}

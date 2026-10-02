@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { now } from "@/lib/clock";
 import { listBookingsForOccurrence, markAttendance } from "@/lib/data/bookings";
 import { getOccurrence } from "@/lib/data/tasks";
+import { syncLevels } from "@/lib/data/volunteers";
 import { query } from "@/lib/db";
 import { track } from "@/lib/events";
 import { requireOrgTask } from "@/lib/ngo";
@@ -31,6 +32,7 @@ export async function saveAttendanceAction(_prev: AttendanceState, form: FormDat
     if (v === "attended" || v === "no_show") marks[b.id] = v;
   }
   const changed = await markAttendance(occId, marks);
+  await syncLevels(bookings.map((b) => b.user_id), await now());
 
   // §10.2: one question in the post-event form.
   const minutes = Number(form.get("chasing_minutes"));

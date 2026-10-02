@@ -3,9 +3,10 @@ import { ClockControl } from "@/components/clock-control";
 import { Button } from "@/components/ui/button";
 import { inviteCodes, listOrgs } from "@/lib/data/orgs";
 import { isAdmin } from "@/lib/auth";
-import { isEnabled, isMvp } from "@/lib/flags";
+import { isEnabled, isMvp, isPrototype } from "@/lib/flags";
 import { fmtDate, fmtPhone } from "@/lib/format";
 import { addInviteCodeAction, setOrgStatusAction, setOrgVerifiedAction } from "./actions";
+import { openAsAction, resetSampleDataAction } from "./demo-actions";
 
 const TONE = { pending: "amber", approved: "green", rejected: "grey" } as const;
 const LABEL = { pending: "Awaiting approval", approved: "Approved", rejected: "Rejected" } as const;
@@ -74,6 +75,26 @@ export default async function AdminNgosPage() {
       </section>
 
       {isEnabled("SIMULATED_CLOCK") && <ClockControl path="/admin" />}
+
+      {isPrototype && (
+        <section className="rounded-xl border bg-card p-4">
+          <h2 className="font-semibold">Sample data</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            8 fictional NGOs, 30 upcoming tasks and 40 volunteers. Resetting wipes everything and rebuilds it around the current simulated time.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <form action={openAsAction}>
+              <Button type="submit" name="who" value="volunteer" size="tap" variant="outline">Open as sample volunteer</Button>
+            </form>
+            <form action={openAsAction}>
+              <Button type="submit" name="who" value="coordinator" size="tap" variant="outline">Open as sample NGO coordinator</Button>
+            </form>
+            <form action={resetSampleDataAction}>
+              <Button type="submit" size="tap" variant="destructive">Reset sample data</Button>
+            </form>
+          </div>
+        </section>
+      )}
 
       {isMvp && (
         <section>

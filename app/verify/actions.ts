@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { safeNext, signIn, signOut } from "@/lib/auth";
 import { query, queryOne } from "@/lib/db";
-import { isMvp } from "@/lib/flags";
+import { isEnabled, isMvp } from "@/lib/flags";
 import { normalisePhone } from "@/lib/format";
 import { sendCode, verifyCode } from "@/lib/otp";
 
@@ -58,7 +58,9 @@ export async function verifyAction(prev: VerifyState, form: FormData): Promise<V
     userId = u.id;
   }
   await signIn(userId);
-  redirect(safeNext(str(form.get("next"))));
+  const next = safeNext(str(form.get("next")));
+  // Prototype: new volunteers continue to Step B (ID), which they can skip.
+  redirect(isEnabled("F8") && !existing ? `/verify/id?next=${encodeURIComponent(next)}` : next);
 }
 
 export async function signOutAction(): Promise<void> {

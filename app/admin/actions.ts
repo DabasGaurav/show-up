@@ -6,6 +6,7 @@ import { isAdmin, lock, unlock, type User } from "@/lib/auth";
 import { now } from "@/lib/clock";
 import { createBooking } from "@/lib/data/bookings";
 import { manualStandby, markReminderSent, saveManualStandby } from "@/lib/data/queues";
+import { decideId } from "@/lib/data/volunteers";
 import { query, queryOne } from "@/lib/db";
 import { normalisePhone } from "@/lib/format";
 import { siteUrl } from "@/lib/site";
@@ -92,4 +93,12 @@ export async function fillSeatAction(form: FormData) {
     skipApproval: true,
   });
   revalidatePath("/admin/released");
+}
+
+/** Prototype: simulated ID approval (F8). */
+export async function decideIdAction(form: FormData) {
+  await assertAdmin();
+  if (!isEnabled("F8")) return;
+  await decideId(String(form.get("id")), form.get("decision") === "approve", await now());
+  revalidatePath("/admin/ids");
 }

@@ -173,6 +173,42 @@ export async function messageOrg(orgId: string, type: string, text: string, link
   }
 }
 
+
+export type Eligibility =
+  | { ok: true; occ: { start_at: Date; slots_needed: number; min_trust: MinTrust; booking_mode: "instant" | "approval"; seats: number } }
+  | { ok: false; reason: BookingBlock; pausedUntil: Date | null; level: TrustLevel; minTrust: MinTrust };
+
+/** Whether this volunteer may book this occurrence right now (§5.2, §5.6). */
+export async function eligibility(user: User, occurrenceId: string, now: Date): Promise<Eligibility> {
+  const occ = await queryOne<{
+    start_at: Date; slots_needed: number; min_trust: MinTrust; booking_mode: "instant" | "approval"; seats: number;
+  }>(
+    `select oc.start_at, t.slots_needed, t.min_trust, t.booking_mode,
+            (select count(*)::int from bookings b where b.occurrence_id = oc.id
+               and b.status in ('booked','awaiting_confirmation','confirmed','attended','no_show','not_recorded')) as seats
+     from task_occurrences oc join tasks t on t.id = oc.task_id
+     where oc.id = $1`,
+    [occurrenceId],
+  );
+  if (!occ) return { ok: false, reason: "started", pausedUntil: null, level: "new", minTrust: "everyone" };
+
+  const facts = await bookingFacts(user.id);
+  const level = isEnabled("F8") ? trustLevel(user.id_status, facts, now) : "new";
+  const paused = pausedUntil(facts, now);
+  const check = canBook({
+    seatsLeft: occ.slots_needed - occ.seats,
+    minTrust: occ.min_trust,
+    level,
+    pausedUntil: paused,
+    alreadyBooked: (await activeBookingFor(user.id, occurrenceId)) !== null,
+    startAt: occ.start_at,
+    now,
+    // MVP1 shows the rules but does not enforce trust levels or the pause.
+    enforceTrust: isEnabled("F13") && isEnabled("F14"),
+  });
+  return check.ok ? { ok: true, occ } : { ok: false, reason: check.reason, pausedUntil: paused, level, minTrust: occ.min_trust };
+}
+
 export type BookResult = { ok: true; booking: BookingView } | { ok: false; reason: BookingBlock };
 
 export interface BookInput {
@@ -187,31 +223,9 @@ export interface BookInput {
 
 /** Books a seat (§5.2). Approval tasks create a request the NGO must answer within 48h. */
 export async function createBooking(i: BookInput): Promise<BookResult> {
-  const occ = await queryOne<{
-    start_at: Date; slots_needed: number; min_trust: MinTrust; booking_mode: "instant" | "approval"; seats: number;
-  }>(
-    `select oc.start_at, t.slots_needed, t.min_trust, t.booking_mode,
-            (select count(*)::int from bookings b where b.occurrence_id = oc.id
-               and b.status in ('booked','awaiting_confirmation','confirmed','attended','no_show','not_recorded')) as seats
-     from task_occurrences oc join tasks t on t.id = oc.task_id
-     where oc.id = $1`,
-    [i.occurrenceId],
-  );
-  if (!occ) return { ok: false, reason: "started" };
-
-  const facts = await bookingFacts(i.user.id);
-  const enforceTrust = isEnabled("F13") && isEnabled("F14");
-  const check = canBook({
-    seatsLeft: occ.slots_needed - occ.seats,
-    minTrust: occ.min_trust,
-    level: isEnabled("F8") ? trustLevel(i.user.id_status, facts, i.now) : "new",
-    pausedUntil: pausedUntil(facts, i.now),
-    alreadyBooked: (await activeBookingFor(i.user.id, i.occurrenceId)) !== null,
-    startAt: occ.start_at,
-    now: i.now,
-    enforceTrust,
-  });
-  if (!check.ok) return check;
+  const elig = await eligibility(i.user, i.occurrenceId, i.now);
+  if (!elig.ok) return { ok: false, reason: elig.reason };
+  const occ = elig.occ;
 
   const approval = occ.booking_mode === "approval" && !i.skipApproval;
   const status: BookingStatus = approval ? "requested" : initialBookingStatus(occ.start_at, i.now);
@@ -359,4 +373,40 @@ export async function bookingFactsFor(userIds: string[]): Promise<Map<string, Bo
   );
   for (const r of rows) out.get(r.user_id)?.push({ status: r.status, startAt: r.start_at, durationMin: r.duration_min });
   return out;
+}
+
+/** NGO accepts or declines a request on an approval task (F15). */
+export async function decideRequest(
+  b: BookingView,
+  accept: boolean,
+  now: Date,
+  origin: string,
+): Promise<{ ok: true } | { ok: false; reason: "closed" | "full" }> {
+  if (b.status !== "requested") return { ok: false, reason: "closed" };
+  const m = messageTask(b);
+  if (!accept) {
+    await query("update bookings set status = 'declined', decided_at = $2 where id = $1 and status = 'requested'", [b.id, now]);
+    await messageVolunteer(b, "request_declined", MSG.requestDeclined(m));
+    return { ok: true };
+  }
+  const t = await occurrenceTurnout(b.occurrence_id, b.slots_needed);
+  if (t.seatsLeft <= 0) return { ok: false, reason: "full" };
+  if (now.getTime() >= b.start_at.getTime()) return { ok: false, reason: "closed" };
+  const status = initialBookingStatus(b.start_at, now);
+  await query(
+    "update bookings set status = $2, decided_at = $3, confirmed_at = $4 where id = $1 and status = 'requested'",
+    [b.id, status, now, status === "confirmed" ? now : null],
+  );
+  const link = `${origin}/c/${b.confirm_token}`;
+  await messageVolunteer(
+    b,
+    "request_accepted",
+    MSG.requestAccepted({ ...m, deadline: fmtDateTime(freeReleaseDeadline(b.start_at)), link }),
+    { link },
+  );
+  return { ok: true };
+}
+
+export async function listBookingsForTask(taskId: string): Promise<BookingView[]> {
+  return query<BookingView>(`${VIEW} where t.id = $1 order by oc.start_at, b.created_at`, [taskId]);
 }

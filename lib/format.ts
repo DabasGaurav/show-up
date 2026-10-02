@@ -30,6 +30,19 @@ export function istDateKey(d: Date): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(d);
 }
 
+/**
+ * The Saturday and Sunday of "this weekend" (IST), as noon timestamps. On a Sunday
+ * afternoon it means next weekend, since this one is nearly over.
+ */
+export function weekendDays(now: Date): [Date, Date] {
+  const noon = istToDate(istDateKey(now), "12:00");
+  const dow = new Date(`${istDateKey(now)}T12:00:00Z`).getUTCDay(); // 0 = Sunday
+  const day = 24 * 60 * 60 * 1000;
+  let toSat = dow === 0 ? -1 : 6 - dow;
+  if (dow === 0 && now.getTime() >= noon.getTime()) toSat = 6;
+  return [new Date(noon.getTime() + toSat * day), new Date(noon.getTime() + (toSat + 1) * day)];
+}
+
 export function istHour(d: Date): number {
   return Number(new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", hour12: false }).format(d)) % 24;
 }

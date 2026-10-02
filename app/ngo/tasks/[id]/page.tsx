@@ -8,6 +8,7 @@ import { TaskCard } from "@/components/task-card";
 import { buttonVariants } from "@/components/ui/button";
 import { now } from "@/lib/clock";
 import { listOccurrences } from "@/lib/data/tasks";
+import { isEnabled } from "@/lib/flags";
 import { fmtDateShort, fmtTimeRange } from "@/lib/format";
 import { requireOrgTask } from "@/lib/ngo";
 import { siteUrl } from "@/lib/site";
@@ -69,11 +70,18 @@ export default async function NgoTaskPage(props: PageProps<"/ngo/tasks/[id]">) {
                   );
                 })}
               </ul>
-              {next && (
-                <Link href={`/ngo/tasks/${task.id}/turnout/${next.id}`} className={cn(buttonVariants({ size: "tap" }), "mt-3")}>
-                  Open turnout view
-                </Link>
-              )}
+              <div className="mt-3 flex flex-wrap gap-2">
+                {next && (
+                  <Link href={`/ngo/tasks/${task.id}/turnout/${next.id}`} className={cn(buttonVariants({ size: "tap" }))}>
+                    Open turnout view
+                  </Link>
+                )}
+                {isEnabled("F8") && (
+                  <Link href={`/ngo/tasks/${task.id}/applicants`} className={cn(buttonVariants({ size: "tap", variant: "outline" }))}>
+                    Applicant profiles
+                  </Link>
+                )}
+              </div>
             </section>
           </div>
           <aside>

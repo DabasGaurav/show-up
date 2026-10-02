@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Lock } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
 import { TaskCard } from "@/components/task-card";
 import { buttonVariants } from "@/components/ui/button";
 import { getUser } from "@/lib/auth";
 import { now } from "@/lib/clock";
+import { activeBookingFor, eligibility } from "@/lib/data/bookings";
 import { getTaskBySlug, listOccurrences } from "@/lib/data/tasks";
 import { track } from "@/lib/events";
 import { fmtDate, fmtDateShort, fmtTimeRange } from "@/lib/format";
@@ -13,6 +15,7 @@ import { siteUrl } from "@/lib/site";
 import { S } from "@/lib/strings";
 import { taskCardData } from "@/lib/task-view";
 import { cn } from "@/lib/utils";
+import { TaskExtras } from "./extras";
 
 async function load(slug: string) {
   const task = await getTaskBySlug(slug);
@@ -38,7 +41,7 @@ export async function generateMetadata(props: PageProps<"/t/[slug]">): Promise<M
 // Public task page: the shareable task card (F2).
 export default async function PublicTaskPage(props: PageProps<"/t/[slug]">) {
   const { slug } = await props.params;
-  const { o } = await props.searchParams;
+  const { o, src } = await props.searchParams;
   const task = await load(slug);
   if (!task) notFound();
 
@@ -46,10 +49,14 @@ export default async function PublicTaskPage(props: PageProps<"/t/[slug]">) {
   const upcoming = occurrences.filter((x) => x.start_at.getTime() > at.getTime());
   const occ = occurrences.find((x) => x.id === o) ?? upcoming[0] ?? occurrences[occurrences.length - 1];
   if (!occ) notFound();
-  await track("task_viewed", { task_id: task.id, occurrence_id: occ.id, source: "link" }, user?.id ?? null);
+  await track("task_viewed", { task_id: task.id, occurrence_id: occ.id, source: src === "feed" ? "feed" : "link" }, user?.id ?? null);
 
   const started = occ.start_at.getTime() <= at.getTime();
   const seatsLeft = task.slots_needed - occ.seats_taken;
+  const elig = user ? await eligibility(user, occ.id, at) : null;
+  const block = elig && !elig.ok ? elig : null;
+  const mine = user ? await activeBookingFor(user.id, occ.id) : null;
+  const here = `/t/${slug}?o=${occ.id}`;
 
   return (
     <>
@@ -84,20 +91,43 @@ export default async function PublicTaskPage(props: PageProps<"/t/[slug]">) {
           </nav>
         )}
 
-        <TaskCard data={taskCardData(task, occ, false)} />
+        <TaskCard data={taskCardData(task, occ, mine !== null && mine.status !== "requested")} />
+        <TaskExtras task={task} userId={user?.id ?? null} />
         <p className="mt-4 rounded-lg bg-muted px-4 py-3 text-sm">{S.rules.release}</p>
       </main>
 
       <div className="fixed inset-x-0 bottom-0 border-t bg-card/95 px-4 py-3 backdrop-blur">
         <div className="mx-auto max-w-lg">
-          {started ? (
+          {mine ? (
+            <Link href="/me" className={cn(buttonVariants({ size: "tap", variant: "outline" }), "w-full")}>
+              {mine.status === "requested" ? "Request sent · view in My bookings" : "You're booked · view in My bookings"}
+            </Link>
+          ) : started ? (
             <p className="text-center text-sm font-medium text-muted-foreground">This session has already started.</p>
           ) : seatsLeft <= 0 ? (
             <p className="text-center text-sm font-medium text-gap">
               This session is full. Check back: released seats reopen here straight away.
             </p>
+          ) : block?.reason === "paused" ? (
+            <p className="text-center text-sm font-medium text-gap">
+              Verified-only and Trusted-only tasks are paused for you until {block.pausedUntil ? fmtDateShort(block.pausedUntil) : "later"}, after two no-shows in 90 days.
+            </p>
+          ) : block?.reason === "trust_level" ? (
+            <div className="space-y-2">
+              <p className="flex items-center justify-center gap-1.5 text-center text-sm font-medium">
+                <Lock className="size-4" aria-hidden />
+                {block.minTrust === "trusted"
+                  ? "Open to Trusted volunteers: Verified, plus 3 slots attended with no no-shows."
+                  : "Open to Verified volunteers."}
+              </p>
+              {block.level === "new" && (
+                <Link href={`/verify/id?next=${encodeURIComponent(here)}`} className={cn(buttonVariants({ size: "tap" }), "w-full")}>
+                  Get Verified
+                </Link>
+              )}
+            </div>
           ) : (
-            <Link href={`/t/${slug}/book?o=${occ.id}`} className={cn(buttonVariants({ size: "tap" }), "w-full")}>
+            <Link href={`/t/${slug}/book?o=${occ.id}${src === "feed" ? "&src=feed" : ""}`} className={cn(buttonVariants({ size: "tap" }), "w-full")}>
               {task.booking_mode === "approval" ? "Request to join" : "Book this slot"}
             </Link>
           )}

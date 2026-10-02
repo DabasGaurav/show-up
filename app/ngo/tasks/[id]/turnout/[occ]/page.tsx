@@ -3,16 +3,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
 import { Chip, LevelBadge } from "@/components/badges";
-import { bookingFactsFor, listBookingsForOccurrence } from "@/lib/data/bookings";
+import { listBookingsForOccurrence } from "@/lib/data/bookings";
+import { volunteerProfiles } from "@/lib/data/volunteers";
 import { getOccurrence } from "@/lib/data/tasks";
 import { queryOne } from "@/lib/db";
 import { isEnabled, isMvp } from "@/lib/flags";
 import { fmtDate, fmtDateTime, fmtPhone, fmtTimeRange, shortName } from "@/lib/format";
 import { requireOrgTask } from "@/lib/ngo";
-import {
-  canMarkAttendance, reliabilityRecord, reliabilityString, SEAT_STATUSES, statusChip, trustLevel, turnout,
-  type ChipTone,
-} from "@/lib/rules";
+import { canMarkAttendance, SEAT_STATUSES, statusChip, turnout, type ChipTone } from "@/lib/rules";
 import { tick } from "@/lib/tick";
 import { cn } from "@/lib/utils";
 import { AttendanceForm } from "./attendance-form";
@@ -47,13 +45,7 @@ export default async function TurnoutPage(props: PageProps<"/ngo/tasks/[id]/turn
 
   const bookings = await listBookingsForOccurrence(occ.id);
   const t = turnout(task.slots_needed, bookings);
-  const facts = await bookingFactsFor([...new Set(bookings.map((b) => b.user_id))]);
-  const levels = isEnabled("F8")
-    ? new Map((await Promise.all(bookings.map(async (b) => {
-        const u = await queryOne<{ id_status: "none" | "pending" | "approved" | "rejected" }>("select id_status from users where id = $1", [b.user_id]);
-        return [b.user_id, trustLevel(u?.id_status ?? "none", facts.get(b.user_id) ?? [], at)] as const;
-      }))))
-    : null;
+  const profiles = await volunteerProfiles(bookings.map((b) => b.user_id), at);
 
   const marking = canMarkAttendance(occ.start_at, at);
   const started = at.getTime() >= occ.start_at.getTime();
@@ -145,11 +137,11 @@ export default async function TurnoutPage(props: PageProps<"/ngo/tasks/[id]/turn
                     <div>
                       <p className="flex flex-wrap items-center gap-2 font-medium">
                         {shortName(b.user_name)}
-                        {levels && <LevelBadge level={levels.get(b.user_id) ?? "new"} />}
+                        {isEnabled("F8") && <LevelBadge level={profiles.get(b.user_id)?.level ?? "new"} />}
                         {b.source === "standby" && <Chip tone="green">Filled by standby</Chip>}
                         {b.source === "admin" && <Chip tone="green">Filled by team</Chip>}
                       </p>
-                      <p className="text-xs text-muted-foreground">{reliabilityString(reliabilityRecord(facts.get(b.user_id) ?? []))}</p>
+                      <p className="text-xs text-muted-foreground">{profiles.get(b.user_id)?.recordString}</p>
                     </div>
                     <Chip tone={chip.tone}>{chip.label}</Chip>
                   </div>
