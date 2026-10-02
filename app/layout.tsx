@@ -2,10 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
-import { LabBar } from "@/components/lab-bar";
-import { MessagePreview } from "@/components/message-preview";
 import { Toaster } from "@/components/toaster";
-import { isEnabled } from "@/lib/flags";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap" });
 const fraunces = Fraunces({ variable: "--font-fraunces", subsets: ["latin"], weight: ["600", "700"], display: "swap" });
@@ -13,10 +10,12 @@ const fraunces = Fraunces({ variable: "--font-fraunces", subsets: ["latin"], wei
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
   title: { default: "Show-Up", template: "%s · Show-Up" },
-  description: "Give a few hours. Make them count. Real people, real causes, close to home.",
+  description: "Give a few hours. Make them count. Find something to do near you, and save your spot.",
 };
 
 export const viewport: Viewport = { themeColor: "#0f5257" };
+
+const footLink = "inline-flex min-h-11 items-center underline underline-offset-2";
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
@@ -24,19 +23,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col">
         <div className="flex flex-1 flex-col">{children}</div>
         <footer className="px-4 pt-10 pb-28 text-sm text-ink-soft">
-          <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="font-heading font-semibold text-ink">Show-Up</span>
-            <span aria-hidden>·</span>
-            <span>Made in India for people who show up</span>
-            <span aria-hidden>·</span>
-            <Link href="/privacy" className="inline-flex min-h-11 items-center underline underline-offset-2">Privacy</Link>
-            <span aria-hidden>·</span>
-            <Link href="/privacy#contact" className="inline-flex min-h-11 items-center underline underline-offset-2">Contact us</Link>
+          <div className="mx-auto max-w-5xl">
+            <div>Your number stays private until you&apos;re confirmed. We never sell your details.</div>
+            <div className="mt-1 flex flex-wrap items-center gap-x-4">
+              <span className="font-heading font-semibold text-ink">Show-Up</span>
+              <Link href="/for-ngos" className={footLink}>For NGOs</Link>
+              <Link href="/privacy" className={footLink}>Privacy</Link>
+            </div>
           </div>
         </footer>
         <Toaster />
-        {isEnabled("MESSAGE_PREVIEW") && <MessagePreview />}
-        <LabBar />
       </body>
     </html>
   );

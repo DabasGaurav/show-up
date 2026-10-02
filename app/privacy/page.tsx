@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Lock, PhoneOff, Trash2 } from "lucide-react";
-import { AppHeader } from "@/components/app-header";
+import { Header } from "@/components/site-header";
 
 export const metadata: Metadata = { title: "Privacy" };
 
@@ -9,7 +9,7 @@ const CONTACT = process.env.NEXT_PUBLIC_CONTACT_EMAIL;
 export default function PrivacyPage() {
   return (
     <>
-      <AppHeader />
+      <Header />
       <main className="mx-auto w-full max-w-lg flex-1 px-4 py-8">
         <h1 className="text-3xl leading-9">Your details stay yours.</h1>
         <ul className="mt-6 space-y-4">

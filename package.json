@@ -7,13 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "dev:proto": "APP_MODE=prototype next dev -p 3100",
-    "dev:mvp": "APP_MODE=mvp NEXT_DIST_DIR=.next-mvp next dev -p 3101",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "db:migrate": "tsx --conditions=react-server scripts/db.ts migrate",
-    "db:seed": "tsx --conditions=react-server scripts/db.ts seed",
-    "build:mvp": "APP_MODE=mvp next build"
+    "seed": "node scripts/seed.mjs",
+    "db:migrate": "tsx --conditions=react-server scripts/migrate.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -43,6 +40,7 @@
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5",
+    "vite": "^8.3.2",
     "vitest": "^5.0.3"
   }
 }

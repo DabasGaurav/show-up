@@ -11,10 +11,9 @@ const MESSAGES: Record<string, string> = {
   in: "You're in.",
   out: "You're signed out.",
   posted: "Posted. Your link is ready.",
-  marked: "Thanks! Everyone's track record is updated.",
-  saved: "Saved.",
-  waiting: "We'll message you if someone frees theirs.",
-  rated: "Thanks. That helps the next volunteer.",
+  yes: "Lovely. See you there.",
+  freed: "Done. Your spot is open for someone else.",
+  sent: "Thanks! We'll call you within a day.",
 };
 
 export function toast(message: string) {
