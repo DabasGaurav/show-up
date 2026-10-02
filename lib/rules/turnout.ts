@@ -1,98 +1,52 @@
-// Turnout view counts (F7, §6.1 Screen 9) and the MVP1 primary metric (§10.1).
-import { isUnconfirmed } from "./release";
-import { RULES } from "./config";
+// "Who's coming" counts, and the one number on the admin page (spec §2.8, §2.11).
 import type { BookingStatus } from "./types";
-import { SEAT_STATUSES } from "./types";
 
-export interface TurnoutBooking {
-  status: BookingStatus;
-  source?: string;
-}
-
-export interface Turnout {
+export interface WhoCounts {
   needed: number;
-  booked: number;
-  confirmed: number;
-  unconfirmed: number;
-  released: number;
-  filledByStandby: number;
-  gaps: number;
-  seatsLeft: number;
+  /** Said yes. */
+  coming: number;
+  /** Has a spot but has not said yes yet. */
+  notHeardBack: number;
+  cantMakeIt: number;
+  stillNeeded: number;
 }
 
-/** booked = confirmed + unconfirmed + (attended | no_show | not_recorded). */
-export function turnout(needed: number, bookings: TurnoutBooking[]): Turnout {
-  const is = (...s: BookingStatus[]) => bookings.filter((b) => s.includes(b.status)).length;
-  const booked = is(...SEAT_STATUSES);
+export function whoIsComing(needed: number, statuses: BookingStatus[]): WhoCounts {
+  const n = (...s: BookingStatus[]) => statuses.filter((x) => s.includes(x)).length;
+  const coming = n("confirmed");
+  const notHeardBack = n("booked", "awaiting_confirmation");
   return {
     needed,
-    booked,
-    confirmed: is("confirmed"),
-    unconfirmed: is("booked", "awaiting_confirmation"),
-    released: is("released_early", "released_late"),
-    filledByStandby: bookings.filter((b) => b.source === "standby" && SEAT_STATUSES.includes(b.status)).length,
-    gaps: Math.max(0, needed - booked),
-    seatsLeft: Math.max(0, needed - booked),
+    coming,
+    notHeardBack,
+    cantMakeIt: n("released_early", "released_late"),
+    stillNeeded: Math.max(0, needed - coming - notHeardBack),
   };
 }
 
-export type ChipTone = "green" | "amber" | "grey" | "red" | "blue";
-
-/** Status chip label and tone. Every status is shown with text as well as colour. */
-export function statusChip(
-  status: BookingStatus,
-  startAt: Date,
-  now: Date,
-  rules = RULES,
-): { label: string; tone: ChipTone } {
-  switch (status) {
-    case "requested": return { label: "Requested", tone: "blue" };
-    case "booked":
-    case "awaiting_confirmation":
-      if (isUnconfirmed(status, startAt, now, rules)) return { label: "Unconfirmed", tone: "amber" };
-      return status === "booked"
-        ? { label: "Booked", tone: "blue" }
-        : { label: "Awaiting confirmation", tone: "amber" };
-    case "confirmed": return { label: "Confirmed", tone: "green" };
-    case "released_early": return { label: "Released", tone: "grey" };
-    case "released_late": return { label: "Released late", tone: "grey" };
-    case "attended": return { label: "Attended", tone: "green" };
-    case "no_show": return { label: "No-show", tone: "red" };
-    case "not_recorded": return { label: "Not recorded", tone: "grey" };
-    case "declined": return { label: "Declined", tone: "grey" };
-    case "auto_released": return { label: "No reply — released", tone: "grey" };
-  }
+/** Spots left on an activity date. */
+export function spotsLeft(needed: number, statuses: BookingStatus[]): number {
+  const held = statuses.filter((s) => ["booked", "awaiting_confirmation", "confirmed", "attended", "no_show", "not_recorded"].includes(s)).length;
+  return Math.max(0, needed - held);
 }
 
-export interface MvpMetrics {
-  total: number;
-  attended: number;
-  releasedEarly: number;
-  releasedLate: number;
-  noShows: number;
-  /** (attended + released_early) ÷ all bookings for past occurrences, excluding not_recorded. */
-  showUpOrEarlyReleaseRate: number | null;
-  noShowRate: number | null;
-  lateReleaseRate: number | null;
+export interface ShowUpRate {
+  /** Past spots with a known ending. */
+  spots: number;
+  came: number;
+  freedEarly: number;
+  freedLate: number;
+  didntCome: number;
+  /** "Came or freed their spot early", as a % of all spots. Null with nothing to count. */
+  rate: number | null;
 }
 
-/** Pass every booking for occurrences that have already happened. */
-export function mvpMetrics(pastBookings: { status: BookingStatus }[]): MvpMetrics {
-  const n = (s: BookingStatus) => pastBookings.filter((b) => b.status === s).length;
-  const attended = n("attended");
-  const releasedEarly = n("released_early");
-  const releasedLate = n("released_late");
-  const noShows = n("no_show");
-  const total = attended + releasedEarly + releasedLate + noShows;
-  const rate = (x: number) => (total === 0 ? null : Math.round((x / total) * 1000) / 10);
-  return {
-    total,
-    attended,
-    releasedEarly,
-    releasedLate,
-    noShows,
-    showUpOrEarlyReleaseRate: rate(attended + releasedEarly),
-    noShowRate: rate(noShows),
-    lateReleaseRate: rate(releasedLate),
-  };
+export function showUpRate(pastStatuses: BookingStatus[]): ShowUpRate {
+  const n = (s: BookingStatus) => pastStatuses.filter((x) => x === s).length;
+  const came = n("attended");
+  const freedEarly = n("released_early");
+  const freedLate = n("released_late");
+  const didntCome = n("no_show");
+  const spots = came + freedEarly + freedLate + didntCome;
+  return { spots, came, freedEarly, freedLate, didntCome, rate: spots === 0 ? null : Math.round(((came + freedEarly) / spots) * 1000) / 10 };
 }

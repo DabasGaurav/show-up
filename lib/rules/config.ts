@@ -1,27 +1,18 @@
-// Policy values for every business rule in PRD §5. Change policies here, not in
-// the rule functions (§18).
+// The numbers behind every rule in the spec (§3). Change them here, not in the rules.
 
 export const HOUR_MS = 60 * 60 * 1000;
 export const DAY_MS = 24 * HOUR_MS;
 
 export const RULES = {
-  confirmRequestHours: 48, // T−48h: ask for confirmation
-  confirmReminderHours: 36, // T−36h: remind if unconfirmed
-  freeReleaseHours: 24, // release before T−24h carries no penalty
-  dayOfReminderHours: 3, // T−3h: day-of reminder
-  attendanceWindowHours: 72, // unmarked after this → not_recorded
-  trustedAttendedSlots: 3,
-  trustWindowDays: 90,
-  noShowLimit: 2,
-  noShowWindowDays: 90,
-  pauseDays: 30,
-  standbyOfferHours: 2,
-  responseHours: 48,
-  responseWindowDays: 90,
-  lapsedDays: 30,
-  nudgeMaxTasks: 3,
-  minReviewsToShowRating: 3,
-  doneDefinitionMinChars: 20,
+  /** "Still on?" goes out 2 days before. */
+  checkInHours: 48,
+  /** One gentle reminder 1.5 days before, if there is no reply. */
+  reminderHours: 36,
+  /** Freeing a spot at least this long before the start leaves nothing on the record. */
+  freeHours: 24,
+  /** The NGO can mark who came from the start until 3 days after. */
+  markDays: 3,
+  /** "Come back" email after this many days without saving a spot, and no more often. */
+  comeBackDays: 30,
+  comeBackActivities: 3,
 } as const;
-
-export type Rules = typeof RULES;

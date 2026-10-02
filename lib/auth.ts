@@ -3,14 +3,12 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { queryOne } from "@/lib/db";
-import type { IdStatus, TrustLevel } from "@/lib/rules";
 
-// Session = signed, http-only cookie holding the user id. Phone ownership is
-// proven by the phone check (lib/otp.ts) before a session is issued.
+// Session = signed, http-only cookie holding the user id. It is issued only after
+// the person opens their email link (lib/signin.ts).
 
 const USER_COOKIE = "su_uid";
 const ADMIN_COOKIE = "su_admin";
-const LAB_COOKIE = "su_lab";
 const MAX_AGE = 60 * 60 * 24 * 60;
 
 const DEV_SECRET = "dev-only-secret-change-me";
@@ -56,8 +54,6 @@ export interface User {
   city: string | null;
   is_online_ok: boolean;
   saved_causes: string[];
-  level: TrustLevel;
-  id_status: IdStatus;
   created_at: Date;
   last_active_at: Date;
 }
@@ -76,43 +72,37 @@ export async function getUser(): Promise<User | null> {
   return queryOne<User>("select * from users where id = $1", [id]);
 }
 
-/** Sends the visitor through the phone check, then back to `next`. */
+/** Sends the visitor to sign in, then back to `next`. */
 export async function requireUser(next: string): Promise<User> {
   const user = await getUser();
-  if (!user) redirect(`/verify?next=${encodeURIComponent(next)}`);
+  if (!user) redirect(`/signin?next=${encodeURIComponent(next)}`);
   return user;
 }
 
-// --- Team-only areas: admin console and Test Lab (passcode, §13) ---
+// --- Admin: team logins only ---
 
-function passcodeFor(kind: "admin" | "lab"): string {
-  const env = kind === "admin" ? process.env.ADMIN_PASSCODE : process.env.LAB_PASSCODE;
+function adminPasscode(): string {
+  const env = process.env.ADMIN_PASSCODE;
   if (env) return env;
-  if (process.env.NODE_ENV === "production") throw new Error(`${kind.toUpperCase()}_PASSCODE is not set`);
-  return kind === "admin" ? "showup-admin" : "showup-lab";
+  if (process.env.NODE_ENV === "production") throw new Error("ADMIN_PASSCODE is not set");
+  return "showup-admin";
 }
 
-export async function unlock(kind: "admin" | "lab", passcode: string): Promise<boolean> {
-  const expected = Buffer.from(passcodeFor(kind));
+export async function unlockAdmin(passcode: string): Promise<boolean> {
+  const expected = Buffer.from(adminPasscode());
   const given = Buffer.from(passcode);
   if (expected.length !== given.length || !timingSafeEqual(expected, given)) return false;
-  (await cookies()).set(kind === "admin" ? ADMIN_COOKIE : LAB_COOKIE, seal(kind), cookieOpts);
+  (await cookies()).set(ADMIN_COOKIE, seal("admin"), cookieOpts);
   return true;
 }
 
-export async function lock(kind: "admin" | "lab"): Promise<void> {
-  (await cookies()).delete(kind === "admin" ? ADMIN_COOKIE : LAB_COOKIE);
+export async function lockAdmin(): Promise<void> {
+  (await cookies()).delete(ADMIN_COOKIE);
 }
 
 export async function isAdmin(): Promise<boolean> {
   if (unseal((await cookies()).get(ADMIN_COOKIE)?.value) === "admin") return true;
   return (await getUser())?.role === "admin";
-}
-
-/** The Test Lab opens with its own passcode, or for anyone already in the admin console. */
-export async function isLabUnlocked(): Promise<boolean> {
-  if (unseal((await cookies()).get(LAB_COOKIE)?.value) === "lab") return true;
-  return isAdmin();
 }
 
 /** Only allow same-site relative redirects. */

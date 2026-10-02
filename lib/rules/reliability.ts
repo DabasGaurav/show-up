@@ -1,52 +1,36 @@
-// §5.5 Reliability record, plus streak and verified hours (F16).
-import type { BookingFact } from "./types";
+// Track record (spec §3): "Came X of Y times", plus late frees and didn't-comes.
+import type { SpotFact } from "./types";
 
-export interface ReliabilityRecord {
-  attended: number;
-  /** Past bookings that were not early-released. */
-  booked: number;
-  lateReleases: number;
-  noShows: number;
+export type Dot = "came" | "freed" | "missed";
+
+export interface TrackRecord {
+  came: number;
+  /** Past spots that were not freed early. */
+  total: number;
+  freedLate: number;
+  didntCome: number;
+  /** Most recent last, at most 10. */
+  dots: Dot[];
+  text: string;
+  empty: boolean;
 }
 
-export function reliabilityRecord(bookings: BookingFact[]): ReliabilityRecord {
-  const count = (s: BookingFact["status"]) => bookings.filter((b) => b.status === s).length;
-  const attended = count("attended");
-  const lateReleases = count("released_late");
-  const noShows = count("no_show");
-  return { attended, booked: attended + lateReleases + noShows, lateReleases, noShows };
-}
-
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-
-/** e.g. `Attended 7 of 8 booked slots · 1 late release · 0 no-shows` */
-export function reliabilityString(r: ReliabilityRecord): string {
-  if (r.booked === 0) return "No slots yet";
-  return [
-    `Attended ${r.attended} of ${plural(r.booked, "booked slot", "booked slots")}`,
-    plural(r.lateReleases, "late release", "late releases"),
-    plural(r.noShows, "no-show", "no-shows"),
-  ].join(" · ");
-}
-
-/** Commitments kept in a row, most recent first. An early release keeps the streak. */
-export function keptStreak(bookings: BookingFact[]): number {
-  const resolved = bookings
-    .filter((b) => ["attended", "no_show", "released_late", "released_early"].includes(b.status))
-    .sort((a, b) => b.startAt.getTime() - a.startAt.getTime());
-  let streak = 0;
-  for (const b of resolved) {
-    if (b.status === "no_show" || b.status === "released_late") break;
-    streak++;
-  }
-  return streak;
-}
-
-/** An attended booking adds verified hours equal to the slot duration (§5.4). */
-export function verifiedHours(bookings: BookingFact[], sinceYear?: number): number {
-  const minutes = bookings
-    .filter((b) => b.status === "attended")
-    .filter((b) => sinceYear === undefined || b.startAt.getFullYear() === sinceYear)
-    .reduce((sum, b) => sum + (b.durationMin ?? 0), 0);
-  return Math.round((minutes / 60) * 10) / 10;
+export function trackRecord(facts: SpotFact[]): TrackRecord {
+  const past = facts
+    .filter((f) => f.status === "attended" || f.status === "no_show" || f.status === "released_late")
+    .sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
+  const came = past.filter((f) => f.status === "attended").length;
+  const didntCome = past.filter((f) => f.status === "no_show").length;
+  const freedLate = past.filter((f) => f.status === "released_late").length;
+  const total = past.length;
+  const extras = [freedLate ? `freed ${freedLate} late` : "", didntCome ? `${didntCome} didn't come` : ""].filter(Boolean);
+  return {
+    came,
+    total,
+    freedLate,
+    didntCome,
+    dots: past.slice(-10).map((f) => (f.status === "attended" ? "came" : f.status === "no_show" ? "missed" : "freed")),
+    empty: total === 0,
+    text: total === 0 ? "No history yet" : [`Came ${came} of ${total} ${total === 1 ? "time" : "times"}`, ...extras].join(" · "),
+  };
 }

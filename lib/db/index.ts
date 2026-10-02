@@ -1,11 +1,10 @@
 import "server-only";
 import fs from "node:fs";
 import path from "node:path";
-import { APP_MODE } from "@/lib/flags";
 
 // One Postgres schema, two drivers:
-//  - DATABASE_URL set  → Supabase Postgres (deployed builds)
-//  - otherwise         → embedded Postgres (PGlite) in .data/, for local dev
+//  - DATABASE_URL set  → hosted Postgres (the live site)
+//  - otherwise         → a local database in .data/, for development
 // Both run the same files in /supabase/migrations.
 
 export type Row = Record<string, unknown>;
@@ -81,16 +80,12 @@ async function createRemoteDb(url: string): Promise<Db> {
 async function connect(): Promise<Db> {
   const url = process.env.DATABASE_URL;
   if (url) return createRemoteDb(url);
-  // Serverless hosts have no writable disk for the embedded database.
-  if (process.env.VERCEL) throw new Error("DATABASE_URL is not set. Point it at the Supabase Postgres connection string.");
-  // Tests use a throwaway in-memory database and seed it themselves.
+  // Hosted builds have no writable disk for the local database.
+  if (process.env.VERCEL) throw new Error("DATABASE_URL is not set.");
+  // Tests use a throwaway in-memory database.
   const memory = process.env.SHOWUP_DB === "memory";
-  const db = await createLocalDb(memory ? undefined : path.join(process.cwd(), ".data", `pglite-${APP_MODE}`));
-  const fresh = await migrate(db, { local: true });
-  if (fresh && APP_MODE === "prototype" && !memory) {
-    const { seed } = await import("@/supabase/seed");
-    await seed(db);
-  }
+  const db = await createLocalDb(memory ? undefined : path.join(process.cwd(), ".data", "pglite"));
+  await migrate(db, { local: true });
   return db;
 }
 

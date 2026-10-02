@@ -1,6 +1,5 @@
 // Display helpers. Times are stored in UTC and shown in IST (PRD §13).
 // Pure and safe to import from client components.
-import { RECURRENCE, type RecurrenceRule } from "./constants";
 
 const TZ = "Asia/Kolkata";
 const IST_OFFSET = "+05:30";
@@ -69,20 +68,10 @@ export function fmtDuration(min: number): string {
   return m === 0 ? `${h} ${h === 1 ? "hour" : "hours"}` : `${h}h ${m}m`;
 }
 
-/** "One-off" or e.g. "Every Saturday for 4 weeks". */
-export function fmtCommitment(
-  commitment: "one_off" | "recurring",
-  rule: string | null,
-  occurrences: number,
-  start: Date,
-): string {
-  if (commitment === "one_off" || !rule || !(rule in RECURRENCE)) return "One-off";
-  const r = rule as RecurrenceRule;
-  if (r === "daily") return `Every day for ${occurrences} days`;
-  const day = Number.isNaN(start.getTime()) ? "week" : fmtWeekday(start);
-  return r === "weekly"
-    ? `Every ${day} for ${occurrences} weeks`
-    : `Every other ${day}, ${occurrences} sessions`;
+/** "One-off" or "Every Saturday for 4 weeks". */
+export function fmtRepeats(times: number, start: Date): string {
+  if (times <= 1) return "One-off";
+  return `Every ${Number.isNaN(start.getTime()) ? "week" : fmtWeekday(start)} for ${times} weeks`;
 }
 
 /** hh:mm:ss or "2 days 4 hours" until a deadline. */

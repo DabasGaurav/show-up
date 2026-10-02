@@ -1,80 +1,49 @@
 import "server-only";
-import { now } from "@/lib/clock";
 import { query } from "@/lib/db";
-import { isPrototype } from "@/lib/flags";
+import { SUBJECT } from "@/lib/messages";
 
-// One place every outgoing message passes through (PRD §8.1).
-//  - prototype: nothing is sent; the row appears in the Message preview panel.
-//  - mvp: email is sent automatically (Resend); WhatsApp rows are queued as
-//    `manual_pending` for the admin Reminders queue; SMS is only used for OTP.
+// Every email goes through here. Each one is recorded, and a `key` makes sure the
+// same email is never sent twice however often the jobs run.
 
-export type Channel = "sms" | "whatsapp" | "email" | "in_app";
-
-export interface Message {
-  type: string;
-  channel: Channel;
+export interface Email {
+  type: keyof typeof SUBJECT | string;
+  to: string | null | undefined;
   text: string;
-  to?: string | null;
-  subject?: string;
   userId?: string | null;
-  link?: string;
-  /** When the message is due; defaults to now. */
-  dueAt?: Date;
-  /** Same key is never stored twice — keeps scheduled jobs idempotent (§13). */
-  dedupeKey?: string;
-  /** Extra data for the admin queue (booking, task…). */
-  meta?: Record<string, unknown>;
+  /** Added to the subject, e.g. the activity title. */
+  about?: string;
+  key?: string;
 }
 
-async function sendEmail(to: string, subject: string, text: string): Promise<boolean> {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) {
-    console.log(`[show-up] email not sent (RESEND_API_KEY missing) → ${to}: ${subject}\n${text}`);
+async function deliver(to: string, subject: string, text: string): Promise<boolean> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    // No email provider configured: print it so it can be read while testing.
+    console.log(`[show-up] email to ${to} · ${subject}\n${text}`);
     return false;
   }
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
-    headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-    body: JSON.stringify({
-      from: process.env.EMAIL_FROM ?? "Show-Up <onboarding@resend.dev>",
-      to,
-      subject,
-      text,
-    }),
+    headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
+    body: JSON.stringify({ from: process.env.EMAIL_FROM ?? "Show-Up <onboarding@resend.dev>", to, subject, text }),
   });
-  if (!res.ok) console.error(`[show-up] email failed (${res.status}) → ${to}`);
+  if (!res.ok) console.error(`[show-up] email failed (${res.status}) to ${to}`);
   return res.ok;
 }
 
-/** Returns false when the message already exists (same dedupeKey). */
-export async function notify(m: Message): Promise<boolean> {
-  const payload = { to: m.to ?? null, text: m.text, subject: m.subject ?? null, link: m.link ?? null, ...m.meta };
-  const manual = !isPrototype && m.channel === "whatsapp";
+/** Returns "sent", "logged" (no provider set up), "failed", or "duplicate". */
+export async function sendEmail(e: Email): Promise<"sent" | "logged" | "failed" | "duplicate"> {
+  if (!e.to) return "failed";
+  const subject = [SUBJECT[e.type] ?? "Show-Up", e.about].filter(Boolean).join(" · ");
   const rows = await query<{ id: string }>(
-    `insert into notifications (user_id, type, channel, payload, due_at, status, dedupe_key)
-     values ($1, $2, $3, $4::jsonb, $5, $6, $7)
+    `insert into notifications (user_id, type, channel, payload, status, dedupe_key)
+     values ($1, $2, 'email', $3::jsonb, 'queued', $4)
      on conflict (dedupe_key) do nothing
      returning id`,
-    [
-      m.userId ?? null,
-      m.type,
-      m.channel,
-      JSON.stringify(payload),
-      m.dueAt ?? (await now()),
-      manual ? "manual_pending" : "queued",
-      m.dedupeKey ?? null,
-    ],
+    [e.userId ?? null, e.type, JSON.stringify({ to: e.to, subject, text: e.text }), e.key ?? null],
   );
-  if (rows.length === 0) return false;
-  if (manual) return true;
-
-  // Prototype: "sent" means shown in the Message preview. MVP: really send email.
-  let sent = true;
-  if (!isPrototype && m.channel === "email" && m.to) {
-    sent = await sendEmail(m.to, m.subject ?? "Show-Up", m.link ? `${m.text}\n\n${m.link}` : m.text);
-  }
-  if (sent) {
-    await query("update notifications set status = 'sent', sent_at = $2 where id = $1", [rows[0].id, await now()]);
-  }
-  return true;
+  if (rows.length === 0) return "duplicate";
+  const ok = await deliver(e.to, subject, e.text);
+  if (ok) await query("update notifications set status = 'sent', sent_at = now() where id = $1", [rows[0].id]);
+  return ok ? "sent" : process.env.RESEND_API_KEY ? "failed" : "logged";
 }

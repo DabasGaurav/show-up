@@ -1,7 +1,3 @@
-export type TrustLevel = "new" | "verified" | "trusted";
-export type MinTrust = "everyone" | "verified" | "trusted";
-export type IdStatus = "none" | "pending" | "approved" | "rejected";
-
 export type BookingStatus =
   | "requested"
   | "booked"
@@ -15,30 +11,16 @@ export type BookingStatus =
   | "declined"
   | "auto_released";
 
-/** Holds a seat on the task. */
-export const ACTIVE_STATUSES: BookingStatus[] = [
-  "booked",
-  "awaiting_confirmation",
-  "confirmed",
-];
+/** Still holding a spot before the day. */
+export const ACTIVE: BookingStatus[] = ["booked", "awaiting_confirmation", "confirmed"];
+/** Holding, or held, a spot (counts against the number needed). */
+export const HOLDING: BookingStatus[] = [...ACTIVE, "attended", "no_show", "not_recorded"];
+export const FREED: BookingStatus[] = ["released_early", "released_late"];
 
-/** Holds or held a seat (active, or resolved after the slot). */
-export const SEAT_STATUSES: BookingStatus[] = [
-  ...ACTIVE_STATUSES,
-  "attended",
-  "no_show",
-  "not_recorded",
-];
-
-export const RELEASED_STATUSES: BookingStatus[] = [
-  "released_early",
-  "released_late",
-];
-
-/** The minimum a rule needs to know about a past booking. */
-export interface BookingFact {
+/** What a rule needs to know about one of a person's spots. */
+export interface SpotFact {
   status: BookingStatus;
-  /** Start of the slot the booking was for. */
   startAt: Date;
-  durationMin?: number;
 }
+
+export type Tone = "green" | "amber" | "grey" | "red" | "teal";

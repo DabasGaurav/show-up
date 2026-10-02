@@ -1,81 +1,46 @@
-// Messages people receive by WhatsApp and email. Wording follows the redesign brief
-// (B11): warm, short, and always a real day and time. Pure functions.
+// Emails (spec §4): short and warm, and always a real day and time.
 
-export interface MsgTask {
-  task: string;
+export interface Msg {
+  title: string;
   ngo: string;
-  /** "Sat, 12 Oct" */
-  date: string;
-  /** "9:00 am" */
-  time: string;
   /** "Saturday" */
   day: string;
+  /** "9:00 am" */
+  time: string;
 }
 
 export const MSG = {
-  // --- B11 ---
-  bookingConfirmed: (m: MsgTask & { checkIn: string | null; link: string }) =>
-    `You're in for ${m.task} with ${m.ngo} on ${m.date} at ${m.time}. 🙌 ${m.checkIn ? `We'll check in with you on ${m.checkIn}. ` : ""}Plans change? Free up your spot here: ${m.link}`,
+  spotSaved: (m: Msg & { checkInDay: string | null; link: string }) =>
+    `You're in for ${m.title} with ${m.ngo} on ${m.day} at ${m.time}. ${m.checkInDay ? `We'll check in on ${m.checkInDay}. ` : ""}Plans change? Free your spot: ${m.link}`,
 
-  confirmationRequest: (m: MsgTask & { firstName: string; link: string }) =>
-    `Hi ${m.firstName}, still on for ${m.task} this ${m.day} at ${m.time}? Tap to let ${m.ngo} know: ${m.link}`,
+  stillOn: (m: Msg & { link: string }) =>
+    `Still on for ${m.title} this ${m.day} at ${m.time}? One tap lets ${m.ngo} plan: ${m.link}`,
 
-  confirmationReminder: (m: MsgTask & { link: string }) =>
-    `Quick one: are you coming to ${m.task} on ${m.day}? One tap helps ${m.ngo} plan: ${m.link}`,
+  noReply: (m: Msg & { link: string }) => `Quick one: coming to ${m.title} on ${m.day}? ${m.link}`,
 
-  dayOfReminder: (m: MsgTask & { placeOrLink: string; contact: string; done: string }) =>
-    `Today! ${m.task} at ${m.time}, ${m.placeOrLink}. Ask for ${m.contact}. You're done when: ${m.done}. Thank you for showing up. 💛`,
+  morningOf: (m: Msg & { placeOrLink: string; contact: string; done: string }) =>
+    `Today! ${m.title} at ${m.time}, ${m.placeOrLink}. Ask for ${m.contact}. You're done when: ${m.done}. Thanks for showing up 💛`,
 
-  releaseReceipt: (m: { ngo: string }) =>
-    `All sorted, your spot is free for someone else. Thanks for letting ${m.ngo} know.`,
+  freedToVolunteer: (m: { ngo: string }) => `All sorted, your spot is free for someone else. Thanks for telling ${m.ngo}.`,
 
-  ngoReleaseAlert: (m: { name: string; task: string; reason: string | null; coming: number; needed: number }) =>
-    `${m.name} can't make it to ${m.task}${m.reason ? ` (${m.reason})` : ""}. ${m.coming} of ${m.needed} coming. We're on it.`,
+  freedToNgo: (m: { name: string; title: string; reason: string | null; coming: number; needed: number }) =>
+    `${m.name} can't make it to ${m.title}${m.reason ? ` (${m.reason})` : ""}. ${m.coming} of ${m.needed} coming.`,
 
-  ngoAttendancePrompt: (m: { task: string; link: string }) =>
-    `How did ${m.task} go? Mark who came, it takes 30 seconds: ${m.link}`,
+  afterTheDay: (m: { title: string; link: string }) => `How did ${m.title} go? Mark who came, it takes 30 seconds: ${m.link}`,
 
-  // --- Prototype-only features, in the same voice ---
-  bookingRequested: (m: MsgTask) =>
-    `We've asked ${m.ngo} about ${m.task} on ${m.date}. They'll reply within two days.`,
+  comeBack: (m: { list: string }) => `Free this weekend? 3 things near you:\n${m.list}`,
 
-  requestAccepted: (m: MsgTask & { freeBy: string | null; link: string }) =>
-    `Good news: ${m.ngo} would love to have you at ${m.task} on ${m.date} at ${m.time}. ${m.freeBy ? `Plans change? Free up your spot by ${m.freeBy}: ` : "Plans change? Tell them here: "}${m.link}`,
-
-  requestDeclined: (m: MsgTask) =>
-    `${m.ngo} has enough people for ${m.task} on ${m.date} this time. Thanks for offering.`,
-
-  requestAutoReleased: (m: MsgTask & { link: string }) =>
-    `${m.ngo} hasn't replied about ${m.task}, so we've let it go. Here are some others like it: ${m.link}`,
-
-  standbyOffer: (m: MsgTask & { link: string }) =>
-    `A spot just opened! ${m.task}, ${m.date} at ${m.time}. First to say yes gets it: ${m.link}`,
-
-  nudge: (m: { n: number; causes: string }) =>
-    `It's been a while! ${m.n} ${m.n === 1 ? "thing" : "things"} near you ${m.n === 1 ? "matches" : "match"} ${m.causes}.`,
-
-  ngoNewRequest: (m: { name: string; task: string; date: string; link: string }) =>
-    `${m.name} would like to help with ${m.task} (${m.date}). Say yes or not this time: ${m.link}`,
+  signInLink: (m: { link: string }) => `Here's your link to Show-Up. It works for 30 minutes: ${m.link}`,
 } as const;
 
-/** Sent by hand over WhatsApp from the admin Reminders queue. */
-export const MANUAL_REMINDER_TYPES = ["confirmation_request", "confirmation_reminder", "day_of_reminder"] as const;
-
-export const MESSAGE_LABEL: Record<string, string> = {
-  otp: "Sign-in code",
-  booking_confirmed: "Spot saved",
-  booking_requested: "Asked to join",
-  request_accepted: "NGO said yes",
-  request_declined: "NGO said not this time",
-  request_auto_released: "No reply from the NGO",
-  confirmation_request: "Check-in (2 days before)",
-  confirmation_reminder: "Gentle nudge",
-  day_of_reminder: "Morning of",
-  release_receipt: "Spot freed",
-  standby_offer: "A spot opened",
-  nudge: "Miss it?",
-  ngo_release_alert: "To the NGO: spot freed",
-  ngo_attendance_prompt: "To the NGO: mark who came",
-  ngo_new_request: "To the NGO: someone wants to join",
-  volunteer_message: "To the NGO: a question",
+export const SUBJECT: Record<string, string> = {
+  spot_saved: "You're in",
+  still_on: "Still on?",
+  no_reply: "Quick one",
+  morning_of: "Today!",
+  freed_volunteer: "All sorted",
+  freed_ngo: "Someone can't make it",
+  after_the_day: "Mark who came",
+  come_back: "Free this weekend?",
+  sign_in: "Your link to Show-Up",
 };

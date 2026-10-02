@@ -1,131 +1,129 @@
 import "server-only";
 import { query } from "@/lib/db";
-import {
-  contactLine, getBooking, messageOrg, messageTask, messageVolunteer, placeOrLink,
-} from "@/lib/data/bookings";
-import { isEnabled } from "@/lib/flags";
+import { getSpot, orgEmails } from "@/lib/data/bookings";
+import { listUpcoming } from "@/lib/data/tasks";
+import { fmtDayDate, fmtPhone, fmtTime, fmtWeekday, mapLink } from "@/lib/format";
 import { MSG } from "@/lib/messages";
-import { HOUR_MS, RULES } from "@/lib/rules";
+import { sendEmail } from "@/lib/notify";
+import { DAY_MS, HOUR_MS, morningOf, RULES } from "@/lib/rules";
 
-// Scheduled jobs (§5.3, §5.4, §13). Runs every 15 minutes from /api/cron and is
-// safe to run at any time: every message has a dedupe key, so it is never sent
-// twice, and every state change is guarded by the current status.
+// The timed emails (spec §3, §4). Safe to run as often as you like: every email
+// has a key, so it is never sent twice, and each step checks the current status.
 
 export interface JobReport {
-  awaiting: number;
-  reminders: number;
-  dayOf: number;
-  attendancePrompts: number;
-  notRecorded: number;
-  extra: Record<string, number>;
+  stillOn: number;
+  noReply: number;
+  morningOf: number;
+  afterTheDay: number;
+  comeBack: number;
 }
 
-const ids = async (sql: string, params: unknown[]) =>
-  (await query<{ id: string }>(sql, params)).map((r) => r.id);
+const ids = async (sql: string, params: unknown[]) => (await query<{ id: string }>(sql, params)).map((r) => r.id);
 
-/** T−hours, or the booking time if the volunteer booked after that. */
-const dueAt = (b: { start_at: Date; created_at: Date }, hoursBefore: number) =>
-  new Date(Math.max(b.start_at.getTime() - hoursBefore * HOUR_MS, b.created_at.getTime()));
+export async function runJobs(now: Date, origin: string, opts: { comeBack?: boolean } = {}): Promise<JobReport> {
+  const report: JobReport = { stillOn: 0, noReply: 0, morningOf: 0, afterTheDay: 0, comeBack: 0 };
+  const inHours = (h: number) => new Date(now.getTime() + h * HOUR_MS);
 
-export async function runJobs(now: Date, origin: string): Promise<JobReport> {
-  const report: JobReport = { awaiting: 0, reminders: 0, dayOf: 0, attendancePrompts: 0, notRecorded: 0, extra: {} };
-  const at = (hours: number) => new Date(now.getTime() + hours * HOUR_MS);
-
-  // T−48h: booked → awaiting_confirmation, and ask "I'm coming" / "Can't make it".
+  // 2 days before: "Still on for {day}?"
   for (const id of await ids(
     `update bookings b set status = 'awaiting_confirmation'
      from task_occurrences oc
      where oc.id = b.occurrence_id and b.status = 'booked' and oc.start_at > $1 and oc.start_at <= $2
      returning b.id`,
-    [now, at(RULES.confirmRequestHours)],
+    [now, inHours(RULES.checkInHours)],
   )) {
-    const b = (await getBooking(id))!;
-    const link = `${origin}/c/${b.confirm_token}`;
-    await messageVolunteer(b, "confirmation_request", MSG.confirmationRequest({ ...messageTask(b), firstName: b.user_name.split(" ")[0], link }), {
-      link, whatsappQueue: true, dueAt: dueAt(b, RULES.confirmRequestHours),
+    const s = (await getSpot(id))!;
+    await sendEmail({
+      type: "still_on", to: s.user_email, userId: s.user_id, about: s.title, key: `still_on:${id}`,
+      text: MSG.stillOn({ title: s.title, ngo: s.org_name, day: fmtWeekday(s.start_at), time: fmtTime(s.start_at), link: `${origin}/c/${s.confirm_token}` }),
     });
-    report.awaiting++;
+    report.stillOn++;
   }
 
-  // T−36h: still unconfirmed → reminder.
+  // 1.5 days before, no reply: one gentle reminder (never in the same breath as the first email).
   for (const id of await ids(
     `select b.id from bookings b join task_occurrences oc on oc.id = b.occurrence_id
      where b.status = 'awaiting_confirmation' and oc.start_at > $1 and oc.start_at <= $2
-       and not exists (select 1 from notifications n where n.dedupe_key like 'confirmation_reminder:' || b.id || '%')`,
-    [now, at(RULES.confirmReminderHours)],
+       and exists (select 1 from notifications n where n.dedupe_key = 'still_on:' || b.id and n.due_at <= $3)
+       and not exists (select 1 from notifications n where n.dedupe_key = 'no_reply:' || b.id)`,
+    [now, inHours(RULES.reminderHours), new Date(now.getTime() - 6 * HOUR_MS)],
   )) {
-    const b = (await getBooking(id))!;
-    const link = `${origin}/c/${b.confirm_token}`;
-    await messageVolunteer(b, "confirmation_reminder", MSG.confirmationReminder({ ...messageTask(b), link }), {
-      link, whatsappQueue: true, dueAt: dueAt(b, RULES.confirmReminderHours),
+    const s = (await getSpot(id))!;
+    await sendEmail({
+      type: "no_reply", to: s.user_email, userId: s.user_id, about: s.title, key: `no_reply:${id}`,
+      text: MSG.noReply({ title: s.title, ngo: s.org_name, day: fmtWeekday(s.start_at), time: fmtTime(s.start_at), link: `${origin}/c/${s.confirm_token}` }),
     });
-    report.reminders++;
+    report.noReply++;
   }
 
-  // T−3h: day-of reminder to every active booking (no auto-cancel for the unconfirmed).
-  for (const id of await ids(
-    `select b.id from bookings b join task_occurrences oc on oc.id = b.occurrence_id
+  // Morning of: place or link, who to ask for, and "you're done when".
+  const today = await query<{ id: string; start_at: Date }>(
+    `select b.id, oc.start_at from bookings b join task_occurrences oc on oc.id = b.occurrence_id
      where b.status in ('booked','awaiting_confirmation','confirmed') and oc.start_at > $1 and oc.start_at <= $2
-       and not exists (select 1 from notifications n where n.dedupe_key like 'day_of_reminder:' || b.id || '%')`,
-    [now, at(RULES.dayOfReminderHours)],
-  )) {
-    const b = (await getBooking(id))!;
-    await messageVolunteer(
-      b,
-      "day_of_reminder",
-      MSG.dayOfReminder({ ...messageTask(b), placeOrLink: placeOrLink(b), contact: contactLine(b), done: b.done_definition }),
-      { whatsappQueue: true, dueAt: dueAt(b, RULES.dayOfReminderHours) },
-    );
-    report.dayOf++;
-  }
-
-  // Slot end: ask the NGO to mark attendance (once per occurrence).
-  const ended = await query<{ id: string; task_id: string; org_id: string; title: string }>(
-    `select oc.id, t.id as task_id, t.org_id, t.title
-     from task_occurrences oc join tasks t on t.id = oc.task_id
-     where oc.end_at <= $1 and oc.end_at > $2
-       and exists (select 1 from bookings b where b.occurrence_id = oc.id and b.status in ('booked','awaiting_confirmation','confirmed'))
-       and not exists (select 1 from notifications n where n.dedupe_key like 'ngo_attendance_prompt:' || oc.id || '%')`,
-    [now, new Date(now.getTime() - RULES.attendanceWindowHours * HOUR_MS)],
+       and not exists (select 1 from notifications n where n.dedupe_key = 'morning_of:' || b.id)`,
+    [now, inHours(24)],
   );
-  for (const oc of ended) {
-    const link = `${origin}/ngo/tasks/${oc.task_id}/turnout/${oc.id}`;
-    await messageOrg(oc.org_id, "ngo_attendance_prompt", MSG.ngoAttendancePrompt({ task: oc.title, link }), link, `ngo_attendance_prompt:${oc.id}`);
-    report.attendancePrompts++;
+  for (const row of today) {
+    if (now.getTime() < morningOf(row.start_at).getTime()) continue;
+    const s = (await getSpot(row.id))!;
+    const place = s.mode === "online" ? (s.online_link ?? "online") : `${[s.address, s.city].filter(Boolean).join(", ")} (${mapLink(s.lat, s.lng, s.address)})`;
+    await sendEmail({
+      type: "morning_of", to: s.user_email, userId: s.user_id, about: s.title, key: `morning_of:${row.id}`,
+      text: MSG.morningOf({
+        title: s.title, ngo: s.org_name, day: fmtWeekday(s.start_at), time: fmtTime(s.start_at),
+        placeOrLink: place, contact: `${s.contact_name} (${fmtPhone(s.contact_phone)})`, done: s.done_definition,
+      }),
+    });
+    report.morningOf++;
   }
 
-  // 72h after the start with no mark → not_recorded (excluded from metrics).
-  report.notRecorded = (
-    await ids(
-      `update bookings b set status = 'not_recorded'
-       from task_occurrences oc
-       where oc.id = b.occurrence_id and b.status in ('booked','awaiting_confirmation','confirmed') and oc.start_at < $1
-       returning b.id`,
-      [new Date(now.getTime() - RULES.attendanceWindowHours * HOUR_MS)],
-    )
-  ).length;
-
-  // Guaranteed response (F15): a request unanswered for 48h auto-releases, and the
-  // volunteer is pointed to similar tasks.
-  if (isEnabled("F15")) {
-    const released = await ids(
-      `update bookings set status = 'auto_released', released_at = $1
-       where status = 'requested' and created_at < $2 returning id`,
-      [now, new Date(now.getTime() - RULES.responseHours * HOUR_MS)],
-    );
-    for (const id of released) {
-      const b = (await getBooking(id))!;
-      const link = `${origin}/feed?cause=${encodeURIComponent(b.cause)}&city=${encodeURIComponent(b.mode === "online" ? "Online" : b.city)}`;
-      await messageVolunteer(b, "request_auto_released", MSG.requestAutoReleased({ ...messageTask(b), link }), { link });
+  // After the day: ask the NGO to mark who came (while they still can).
+  const ended = await query<{ id: string; activity_id: string; org_id: string; title: string }>(
+    `select oc.id, t.id as activity_id, t.org_id, t.title
+     from task_occurrences oc join tasks t on t.id = oc.task_id
+     where oc.end_at <= $1 and oc.start_at > $2
+       and exists (select 1 from bookings b where b.occurrence_id = oc.id and b.status in ('booked','awaiting_confirmation','confirmed'))
+       and not exists (select 1 from notifications n where n.dedupe_key like 'after_the_day:' || oc.id || ':%')`,
+    [now, new Date(now.getTime() - RULES.markDays * DAY_MS)],
+  );
+  for (const d of ended) {
+    const text = MSG.afterTheDay({ title: d.title, link: `${origin}/dashboard/a/${d.activity_id}?d=${d.id}` });
+    for (const m of await orgEmails(d.org_id)) {
+      await sendEmail({ type: "after_the_day", to: m.email, userId: m.id, about: d.title, key: `after_the_day:${d.id}:${m.id}`, text });
     }
-    report.extra.autoReleased = released.length;
+    report.afterTheDay++;
   }
 
-  // Standby cover (F11): expire offers nobody accepted in time.
-  if (isEnabled("F11")) {
-    report.extra.offersExpired = (
-      await ids("update standby_offers set status = 'expired' where status = 'sent' and expires_at <= $1 returning id", [now])
-    ).length;
-  }
+  if (opts.comeBack) report.comeBack = await comeBack(now, origin);
   return report;
+}
+
+/**
+ * Come back: someone who has not saved a spot in 30 days gets one email with three
+ * upcoming activities in their city or online. Then we wait another 30 days.
+ */
+async function comeBack(now: Date, origin: string): Promise<number> {
+  const since = new Date(now.getTime() - RULES.comeBackDays * DAY_MS);
+  const people = await query<{ id: string; email: string; city: string | null }>(
+    `select u.id, u.email, u.city from users u
+     where u.role = 'volunteer' and u.email is not null and u.created_at < $1
+       and not exists (select 1 from bookings b where b.user_id = u.id and b.created_at >= $1)
+       and not exists (select 1 from notifications n where n.user_id = u.id and n.type = 'come_back' and n.due_at >= $1)`,
+    [since],
+  );
+  if (people.length === 0) return 0;
+  const upcoming = await listUpcoming(now);
+  let sent = 0;
+  for (const p of people) {
+    const picks = upcoming
+      .filter((a) => a.taken < a.slots_needed && (a.mode === "online" || !p.city || a.city === p.city))
+      .slice(0, RULES.comeBackActivities);
+    if (picks.length < RULES.comeBackActivities) continue;
+    const list = picks.map((a) => `• ${a.title}, ${fmtDayDate(a.date_start)} at ${fmtTime(a.date_start)}: ${origin}/a/${a.share_slug}`).join("\n");
+    const res = await sendEmail({
+      type: "come_back", to: p.email, userId: p.id, key: `come_back:${p.id}:${now.toISOString().slice(0, 10)}`, text: MSG.comeBack({ list }),
+    });
+    if (res !== "duplicate") sent++;
+  }
+  return sent;
 }

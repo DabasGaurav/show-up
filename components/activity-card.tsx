@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Clock, MapPin, Video } from "lucide-react";
-import { CauseChip, DateBlock, SpotsDots, TrustTick } from "@/components/kit";
+import { CauseChip, DateBlock, SpotsDots, Tick } from "@/components/kit";
 import { dateBlock, fmtDuration, fmtTimeRange } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -15,25 +15,13 @@ export interface ActivityCardData {
   /** "Online", or a short place line. */
   place: string;
   online: boolean;
-  /** Pass 0 to hide the spots line (e.g. on someone's own plans). */
+  /** Pass 0 to leave out the spots line (on someone's own plans). */
   needed: number;
   taken: number;
 }
 
-/** The activity card (brief A4.1): date block, title, cause, NGO, time, place, spots. */
-export function ActivityCard({
-  a,
-  href,
-  right,
-  footer,
-  className,
-}: {
-  a: ActivityCardData;
-  href?: string;
-  right?: React.ReactNode;
-  footer?: React.ReactNode;
-  className?: string;
-}) {
+/** Activity card: date block, title, cause, NGO with ✓, time, place, spots left. */
+export function ActivityCard({ a, href, right, footer, className }: { a: ActivityCardData; href?: string; right?: React.ReactNode; footer?: React.ReactNode; className?: string }) {
   const body = (
     <div className="flex gap-3.5">
       <DateBlock {...dateBlock(a.start)} className="self-start" />
@@ -44,7 +32,7 @@ export function ActivityCard({
         </div>
         <p className="mt-1 flex items-center gap-1.5 text-sm text-ink-soft">
           <span className="min-w-0 truncate">{a.orgName}</span>
-          {a.orgChecked && <TrustTick className="size-4 [&>svg]:size-3" />}
+          {a.orgChecked && <Tick className="size-4 [&>svg]:size-3" />}
         </p>
         <ul className="mt-2 space-y-1 text-sm">
           <li className="flex min-w-0 items-center gap-1.5">
