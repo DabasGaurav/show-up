@@ -1,36 +1,23 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Show-Up
 
-## Getting Started
+Two-sided micro-volunteering platform. One codebase, two modes — see [docs/PRD.md](docs/PRD.md).
 
-First, run the development server:
+| Command | What it does |
+|---|---|
+| `npm run dev:proto` | Prototype mode on http://localhost:3100 (sample data, Test Lab) |
+| `npm run dev:mvp` | MVP1 mode on http://localhost:3101 (F1–F7 + admin) |
+| `npm test` | Unit tests for the §5 business rules and the schema |
+| `npm run typecheck` / `npm run lint` | Static checks |
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Layout
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- `app/` routes · `components/` UI · `lib/strings.ts` every user-facing string
+- `lib/flags` — `APP_MODE` and the F1–F17 feature table; `requireFeature()` 404s routes outside the mode
+- `lib/rules` — every PRD §5 business rule as a pure function, policy values in `config.ts`
+- `lib/db` — Postgres access. With `DATABASE_URL` set it talks to Supabase; without it, it runs an
+  embedded Postgres (PGlite) in `.data/` using the same `supabase/migrations`
+- `supabase/migrations` schema + RLS · `supabase/seed` prototype sample data · `tests/`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Build log
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Milestones follow PRD §15. Progress and decisions: [docs/BUILD_LOG.md](docs/BUILD_LOG.md).
