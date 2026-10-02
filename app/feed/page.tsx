@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AppHeader } from "@/components/app-header";
 import { FeedCard } from "@/components/feed-card";
+import { Nudge } from "@/components/nudge";
 import { buttonVariants } from "@/components/ui/button";
 import { getUser } from "@/lib/auth";
 import { now } from "@/lib/clock";
@@ -40,6 +41,12 @@ export default async function FeedPage(props: PageProps<"/feed">) {
             lockedLevels={(["verified", "trusted"] as const).filter((l) => !meetsMinTrust(level, l))}
             today={istDateKey(at)}
           />
+        )}
+
+        {user && filters.ids.length === 0 && active === 0 && (
+          <div className="mt-4">
+            <Nudge user={user} now={at} />
+          </div>
         )}
 
         <p className="mt-4 text-sm text-muted-foreground" aria-live="polite">

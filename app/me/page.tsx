@@ -21,7 +21,7 @@ export const metadata: Metadata = { title: "My bookings" };
 
 export default async function MyBookingsPage(props: PageProps<"/me">) {
   const user = await requireUser("/me");
-  const { booked, rated: justRated } = await props.searchParams;
+  const { booked, rated: justRated, moved } = await props.searchParams;
   const at = await tick();
   const [bookings, facts] = await Promise.all([listBookingsForUser(user.id), bookingFacts(user.id)]);
 
@@ -48,6 +48,9 @@ export default async function MyBookingsPage(props: PageProps<"/me">) {
           </p>
         )}
 
+        {moved && (
+          <p role="status" className="mb-4 rounded-lg bg-ok-soft px-4 py-3 text-sm font-medium text-ok">City updated. Here are tasks near your new home.</p>
+        )}
         {justRated && (
           <p role="status" className="mb-4 rounded-lg bg-ok-soft px-4 py-3 text-sm font-medium text-ok">Thanks. Your rating is saved.</p>
         )}
