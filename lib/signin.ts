@@ -29,8 +29,6 @@ export interface Pending {
   expires: number;
 }
 
-/** True when emails are really sent. Otherwise the link is shown on screen (local testing only). */
-export const emailReady = () => Boolean(process.env.RESEND_API_KEY);
 
 export async function hasAccount(email: string): Promise<boolean> {
   return (await queryOne("select 1 as found from users where lower(email) = lower($1)", [email])) !== null;

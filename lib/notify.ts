@@ -20,7 +20,24 @@ export interface Email {
 /** Addresses on the reserved .test domain (our launch listings use @showup.test) must never get mail. */
 export const isTestAddress = (to: string) => /\.test$/i.test(to.trim());
 
+/** A Gmail account (GMAIL_USER + GMAIL_APP_PASSWORD) can send to anyone, with no domain to buy. */
+const gmail = () => (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD ? { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD.replace(/\s/g, "") } : null);
+
+/** True when emails are really sent, by Gmail or by Resend. */
+export const emailReady = () => Boolean(gmail() || process.env.RESEND_API_KEY);
+
 async function deliver(to: string, subject: string, text: string): Promise<boolean> {
+  const auth = gmail();
+  if (auth) {
+    try {
+      const { createTransport } = await import("nodemailer");
+      await createTransport({ service: "gmail", auth }).sendMail({ from: `Show-Up <${auth.user}>`, to, subject, text });
+      return true;
+    } catch (e) {
+      console.error(`[show-up] email failed to ${to}: ${(e as Error).message}`);
+      return false;
+    }
+  }
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     // No email provider configured: print it so it can be read while testing.
@@ -52,5 +69,5 @@ export async function sendEmail(e: Email): Promise<"sent" | "logged" | "failed" 
   if (rows.length === 0) return "duplicate";
   const ok = await deliver(e.to, subject, e.text);
   if (ok) await query("update notifications set status = 'sent', sent_at = now() where id = $1", [rows[0].id]);
-  return ok ? "sent" : process.env.RESEND_API_KEY ? "failed" : "logged";
+  return ok ? "sent" : emailReady() ? "failed" : "logged";
 }
