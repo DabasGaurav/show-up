@@ -90,10 +90,13 @@ interface History {
 }
 
 export async function reseed(db: Db, base: Date = new Date()): Promise<void> {
+  // Deletes cascade through tasks, bookings, ratings, standby and messages. Test Lab
+  // sessions and the event log are evidence and are deliberately kept.
   await db.exec(
-    `truncate table lab_sessions, events, notifications, ratings, standby_offers, standby, bookings,
-       task_occurrences, tasks, org_members, organisations, users restart identity cascade;
-     delete from app_state where key not in ('clock_offset_ms');`,
+    `delete from organisations;
+     delete from users;
+     delete from notifications;
+     delete from app_state where key <> 'clock_offset_ms';`,
   );
   await seed(db, base);
 }

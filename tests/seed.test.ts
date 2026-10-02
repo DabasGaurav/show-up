@@ -41,8 +41,13 @@ describe("seed data (§11)", () => {
     expect(vols).toHaveLength(40);
     expect(new Set(vols.map((v) => v.level))).toEqual(new Set(["new", "verified", "trusted"]));
 
-    // Re-running the seed is clean and repeatable.
+    // Re-running the seed is clean and repeatable, and keeps Test Lab evidence.
+    await db.query("insert into lab_sessions (scenario, tester_id, persona) values ('SH1', 'T-V1', 'Volunteer')");
+    await db.query("insert into events (user_id, session_id, name) select id, 'keep', 'booking_created' from users limit 1");
     await reseed(db, base);
+    expect(await db.query("select 1 from lab_sessions")).toHaveLength(1);
+    expect(await db.query("select 1 from events where session_id = 'keep' and user_id is null")).toHaveLength(1);
+    expect((await db.query("select 1 from bookings b left join users u on u.id = b.user_id where u.id is null")).length).toBe(0);
     expect((await db.query("select 1 from users")).length).toBe(49);
   });
 

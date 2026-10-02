@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { MessageSquareText, X } from "lucide-react";
 import { fmtDateTime, fmtPhone } from "@/lib/format";
@@ -18,6 +19,7 @@ const CHANNEL = { sms: "SMS", whatsapp: "WhatsApp", email: "Email", in_app: "In-
 
 /** Prototype only: a slide-over listing every message the system "sent" (§6.2). */
 export function MessagePreview() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[] | null>(null);
 
@@ -38,6 +40,9 @@ export function MessagePreview() {
       window.removeEventListener("keydown", onKey);
     };
   }, [open, load]);
+
+  // Team screens have their own controls; the panel is for the app itself.
+  if (pathname.startsWith("/lab") || pathname.startsWith("/admin")) return null;
 
   return (
     <>

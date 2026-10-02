@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { S } from "@/lib/strings";
+import { LabBar } from "@/components/lab-bar";
 import { MessagePreview } from "@/components/message-preview";
 import { isEnabled, isPrototype } from "@/lib/flags";
 
@@ -27,6 +28,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           </div>
         </footer>
         {isEnabled("MESSAGE_PREVIEW") && <MessagePreview />}
+        <LabBar />
       </body>
     </html>
   );
