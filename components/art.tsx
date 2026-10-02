@@ -1,4 +1,6 @@
+import Link from "next/link";
 import Peep from "react-peeps";
+import { CauseIcon } from "@/components/cause-icon";
 import { causeColor } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
@@ -30,12 +32,41 @@ function One({ p, className }: { p: P; className?: string }) {
   );
 }
 
-/** Hero: a cluster of friendly faces. */
-export function HeroPeeps({ className }: { className?: string }) {
+// One volunteer per cause: the seven causes cover everything on Show-Up, and no
+// activity sits in two of them. The order matches the Cause filter.
+const BY_CAUSE: { cause: string; p: Omit<P, "bg"> }[] = [
+  { cause: "Teaching", p: { body: "Explaining", hair: "Long", face: "SmileLol", accessory: "GlassRound" } },
+  { cause: "Food", p: { body: "Coffee", hair: "Hijab", face: "Cute" } },
+  { cause: "Trees & green", p: { body: "PointingUp", hair: "Bun", face: "SmileBig" } },
+  { cause: "Animals", p: { body: "FurJacket", hair: "MediumBangs", face: "SmileTeeth" } },
+  { cause: "Health", p: { body: "ShirtCoat", hair: "ShortVolumed", face: "Smile", facialHair: "Chin" } },
+  { cause: "Elders", p: { body: "Sweater", hair: "Turban", face: "Calm", facialHair: "Full" } },
+  { cause: "Skills", p: { body: "Device", hair: "Short", face: "Driven", accessory: "GlassRoundThick" } },
+];
+
+/** Hero: one volunteer for each cause. With `links`, each one opens that cause's activities. */
+export function HeroPeeps({ className, links = false }: { className?: string; links?: boolean }) {
   return (
-    <div className={cn("grid grid-cols-3 gap-3", className)} role="img" aria-label="Illustrated volunteers">
-      {CAST.map((p, i) => <One key={i} p={p} className="aspect-square w-full" />)}
-    </div>
+    <ul className={cn("flex flex-wrap justify-center gap-x-3 gap-y-4", className)} aria-label="Ways to help">
+      {BY_CAUSE.map(({ cause, p }) => {
+        const tile = (
+          <>
+            <span className="relative block">
+              <One p={{ ...p, bg: causeColor(cause) }} className="aspect-square w-full" />
+              <span className="absolute -right-1 -bottom-1 flex size-8 items-center justify-center rounded-full bg-card text-primary shadow-card">
+                <CauseIcon cause={cause} className="size-4" />
+              </span>
+            </span>
+            <span className="mt-2 block text-center text-sm leading-5 font-semibold">{cause}</span>
+          </>
+        );
+        return (
+          <li key={cause} className="w-[22%]">
+            {links ? <Link href={`/?cause=${encodeURIComponent(cause)}`} className="block rounded-xl hover:text-primary">{tile}</Link> : tile}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

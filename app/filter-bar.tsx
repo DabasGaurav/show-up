@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { CalendarDays, Clock, HeartHandshake, MapPin, Repeat, SlidersHorizontal } from "lucide-react";
+import { CalendarDays, ChevronDown, Clock, HeartHandshake, MapPin, Repeat, SlidersHorizontal } from "lucide-react";
 import { CauseIcon } from "@/components/cause-icon";
 import { CAUSES, CITY_NAMES, causeColor } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -33,8 +33,8 @@ export function FilterBar({ f, today }: { f: Filters; today: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const [pending, start] = useTransition();
-  const more = [f.date, f.len, f.kind].filter(Boolean).length;
-  const [open, setOpen] = useState(more > 0);
+  const count = (f.city ? 1 : 0) + f.causes.length + [f.mode, f.date, f.len, f.kind].filter(Boolean).length;
+  const [open, setOpen] = useState(count > 0);
   const go = (next: Partial<Filters>) => {
     const m = { ...f, ...next };
     const p = new URLSearchParams();
@@ -50,11 +50,19 @@ export function FilterBar({ f, today }: { f: Filters; today: string }) {
     <button key={k + v} type="button" aria-pressed={f[k] === v} onClick={() => go({ [k]: f[k] === v ? "" : v })} className={chip}>{label}</button>
   );
   const picked = /^\d{4}/.test(f.date);
-  const count = (f.city ? 1 : 0) + f.causes.length + (f.mode ? 1 : 0) + more;
-  const hide = open ? undefined : "hidden sm:grid";
 
   return (
-    <section aria-label="Filters" className={cn("divide-y rounded-xl bg-card px-4", pending && "opacity-70")}>
+    <section aria-label="Filters" className={cn("rounded-xl bg-card px-4", pending && "opacity-70")}>
+      <div className="flex items-center justify-between gap-3">
+        <button type="button" aria-expanded={open} aria-controls="filter-groups" onClick={() => setOpen(!open)} className="flex min-h-14 flex-1 items-center gap-2 text-left font-semibold">
+          <SlidersHorizontal className="size-5 text-primary" aria-hidden />
+          Filters
+          <span className="text-sm font-medium text-ink-soft">{count ? `${count} on` : "city, cause, date and more"}</span>
+          <ChevronDown className={cn("ml-auto size-5 text-primary transition-transform", open && "rotate-180")} aria-hidden />
+        </button>
+        {count > 0 && <button type="button" onClick={() => start(() => router.replace(pathname, { scroll: false }))} className="flex min-h-11 shrink-0 items-center text-sm font-semibold text-primary underline underline-offset-2">Clear all</button>}
+      </div>
+      <div id="filter-groups" hidden={!open} className="divide-y border-t">
       <Group icon={<MapPin />} label="Where">
         <label htmlFor="city" className="sr-only">City</label>
         <select id="city" value={f.city} onChange={(e) => go({ city: e.target.value })} className={cn("h-11 rounded-full border bg-background px-4 text-sm", f.city && "border-primary bg-primary-soft font-semibold text-primary")}>
@@ -84,7 +92,7 @@ export function FilterBar({ f, today }: { f: Filters; today: string }) {
         })}
       </Group>
 
-      <Group icon={<CalendarDays />} label="When" className={hide}>
+      <Group icon={<CalendarDays />} label="When">
         {one("date", "weekend", "This weekend")}
         <label className={cn(chip, picked && "border-primary bg-primary-soft font-semibold text-primary")}>
           Pick a date
@@ -92,24 +100,17 @@ export function FilterBar({ f, today }: { f: Filters; today: string }) {
         </label>
       </Group>
 
-      <Group icon={<Clock />} label="How long" className={hide}>
+      <Group icon={<Clock />} label="How long">
         {one("len", "short", "Up to 2 hours")}
         {one("len", "mid", "2 to 4 hours")}
         {one("len", "long", "Half a day or more")}
       </Group>
 
-      <Group icon={<Repeat />} label="How often" className={hide}>
+      <Group icon={<Repeat />} label="How often">
         {one("kind", "once", "One-off")}
         {one("kind", "repeats", "Repeats weekly")}
       </Group>
 
-      <div className="flex items-center justify-between gap-3 py-2">
-        <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="flex min-h-11 items-center gap-2 text-sm font-semibold text-primary sm:hidden">
-          <SlidersHorizontal className="size-4" aria-hidden />
-          {open ? "Fewer filters" : more ? `More filters · ${more} on` : "More filters: when, how long"}
-        </button>
-        <p className="hidden text-sm text-ink-soft sm:block">{count ? `${count} ${count === 1 ? "filter" : "filters"} on` : "Showing everything"}</p>
-        {count > 0 && <button type="button" onClick={() => start(() => router.replace(pathname, { scroll: false }))} className="flex min-h-11 items-center text-sm font-semibold text-primary underline underline-offset-2">Clear all</button>}
       </div>
     </section>
   );

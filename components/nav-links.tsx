@@ -23,10 +23,9 @@ export function NavLinks({ signedIn, isNgo }: { signedIn: boolean; isNgo: boolea
           </Link>
         </>
       ) : (
-        <>
-          <Link href="/signin" className={link}>Sign in</Link>
-          <Link href={ngoSide ? "/for-ngos/signup" : "/signup"} className="hidden min-h-11 items-center rounded-full bg-primary px-4 font-semibold whitespace-nowrap text-white hover:bg-primary/90 sm:flex">Sign up</Link>
-        </>
+        <Link href={ngoSide ? "/signin?next=/dashboard" : "/signin"} className="flex min-h-11 items-center rounded-full bg-primary px-4 font-semibold whitespace-nowrap text-white hover:bg-primary/90">
+          Sign in / up
+        </Link>
       )}
     </nav>
   );

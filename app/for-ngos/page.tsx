@@ -35,7 +35,7 @@ export default async function ForNgos() {
               </li>
             ))}
           </ul>
-          <HeroPeeps className="mt-8 hidden max-w-xs sm:grid" />
+          <HeroPeeps className="mt-8 hidden max-w-sm sm:flex" />
         </div>
         <div className="rounded-xl bg-card p-5 text-center">
           <h2 className="text-2xl">It&apos;s free, and takes two minutes.</h2>

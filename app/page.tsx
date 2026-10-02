@@ -59,7 +59,7 @@ export default async function Home(props: PageProps<"/">) {
               </li>
             </ul>
           </div>
-          <HeroPeeps className="mx-auto hidden w-full max-w-xs sm:grid" />
+          <HeroPeeps links className="mx-auto hidden w-full max-w-sm sm:flex" />
         </section>
 
         <FilterBar f={f} today={istDateKey(at)} />
