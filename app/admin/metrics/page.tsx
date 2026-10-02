@@ -51,7 +51,7 @@ export default async function MetricsPage() {
             (attended + released at least 24 hours before) ÷ bookings for past events, excluding “not recorded”. Target ≥{m.target}%. Baseline about {m.baseline}%.
           </p>
           <p className="mt-2 text-sm">
-            Sample so far: <strong>{m.events.length}</strong> {m.events.length === 1 ? "event" : "events"} · <strong>{m.ngoCount}</strong> {m.ngoCount === 1 ? "NGO" : "NGOs"} · <strong>{m.overall.total}</strong> bookings
+            Sample so far: <strong>{m.events.length}</strong> {m.events.length === 1 ? "event" : "events"} · <strong>{m.ngoCount}</strong> {m.ngoCount === 1 ? "NGO" : "NGOs"} · <strong>{m.overall.total}</strong> {m.overall.total === 1 ? "booking" : "bookings"}
             <span className="text-muted-foreground"> (aim: 3+ events, 2+ NGOs, about 40 bookings)</span>
           </p>
         </div>
