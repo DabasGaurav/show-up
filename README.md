@@ -21,8 +21,8 @@ Locally no email is sent: the sign-in link is shown on screen and other emails a
 
 | Who | Page |
 |---|---|
-| Volunteer | `/` explore, `/a/{slug}` activity, `/signin`, `/me` my plans, `/c/{token}` check-in, `/ngo/{slug}` |
-| NGO | `/for-ngos` sign-up, `/dashboard`, `/dashboard/new`, `/dashboard/a/{id}` who's coming |
+| Volunteer | `/` explore, `/a/{slug}` activity, `/signup`, `/signin`, `/me` my plans, `/account` details and track record, `/c/{token}` check-in, `/ngo/{slug}` |
+| NGO | `/for-ngos`, `/for-ngos/signup`, `/dashboard`, `/dashboard/new`, `/dashboard/a/{id}` who's coming |
 | Team | `/admin` approve NGOs, the one number, CSV export |
 
 ## Where things live

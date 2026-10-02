@@ -46,7 +46,7 @@ function Row({ d, past, marking }: { d: DashboardDate; past: boolean; marking: b
 export default async function Dashboard() {
   const user = await requireUser("/dashboard");
   const org = await getOrgForUser(user.id);
-  if (!org) redirect("/for-ngos");
+  if (!org) redirect("/for-ngos/signup");
 
   if (org.status !== "approved") {
     return (

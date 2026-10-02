@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { yesAction } from "@/app/c/[token]/actions";
-import { signOutAction } from "@/app/signin/actions";
 import { ActivityCard } from "@/components/activity-card";
 import { OnePeep } from "@/components/art";
 import { Pill, TrackDots } from "@/components/kit";
@@ -76,19 +75,13 @@ export default async function MyPlans() {
       <main className="mx-auto w-full max-w-lg flex-1 px-4 py-4">
         <h1 className="text-4xl leading-10">My plans</h1>
 
-        <section className="mt-5 rounded-xl bg-card p-4" aria-label="Your track record">
-          <p className="font-semibold">{user.name}</p>
-          <div className="mt-2">
-            {record.empty ? (
-              <p className="text-ink-soft">Your first activity starts your track record.</p>
-            ) : (
-              <>
-                <TrackDots record={record} />
-                <p className="mt-1 text-sm text-ink-soft">NGOs see this when you join their activities.</p>
-              </>
-            )}
-          </div>
-        </section>
+        <Link href="/account" className="mt-5 flex items-center justify-between gap-3 rounded-xl bg-card p-4 hover:ring-2 hover:ring-primary/20" aria-label="Your track record, open my account">
+          <span className="min-w-0">
+            <span className="block font-semibold">{user.name}</span>
+            {record.empty ? <span className="text-ink-soft">Your first activity starts your track record.</span> : <TrackDots record={record} className="mt-1" />}
+          </span>
+          <span className="shrink-0 text-sm font-semibold text-primary">My account</span>
+        </Link>
 
         <h2 className="mt-7 text-2xl">Upcoming</h2>
         {upcoming.length === 0 ? (
@@ -119,9 +112,6 @@ export default async function MyPlans() {
           </>
         )}
 
-        <form action={signOutAction} className="mt-8 text-center">
-          <Button type="submit" variant="ghost" size="tap">Sign out</Button>
-        </form>
       </main>
     </>
   );

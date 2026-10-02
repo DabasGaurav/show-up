@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { User } from "@/lib/auth";
 import { freeSpot, getSpot, markWhoCame, pastStatuses, saveSpot, sayYes, factsFor } from "@/lib/data/bookings";
-import { createOrg, decideOrg, orgStats } from "@/lib/data/orgs";
+import { createOrg, decideOrg, getOrgForUser, orgStats } from "@/lib/data/orgs";
 import { createActivity, getDate, listDates, listUpcoming } from "@/lib/data/tasks";
 import { query } from "@/lib/db";
 import { runJobs } from "@/lib/jobs";
 import { HOUR_MS, DAY_MS, showUpRate, trackRecord } from "@/lib/rules";
-import { finishSignIn, startSignIn } from "@/lib/signin";
+import { finishSignIn, hasAccount, startSignIn } from "@/lib/signin";
 import { seed, seedAllowed } from "@/supabase/seed";
 
 const ORIGIN = "https://test.local";
@@ -207,21 +207,36 @@ describe("come back", () => {
   });
 });
 
-describe("sign in by email link", () => {
-  it("signs in whoever owns the email, and never lets a link be used twice", async () => {
-    const started = await startSignIn({ name: "Tara Rao", phone: "+919811100001", email: "tara@test.local", next: "/me" }, ORIGIN);
-    if (!started.ok || !started.link) throw new Error("no link");
-    const token = started.link.split("/").pop()!;
+describe("sign up and sign in by email link", () => {
+  const open = async (r: Awaited<ReturnType<typeof startSignIn>>) => {
+    if (!r.ok || !r.link) throw new Error("no link");
+    return r.link.split("/").pop()!;
+  };
+
+  it("creates the account from sign-up, and never lets a link be used twice", async () => {
+    expect(await hasAccount("tara@test.local")).toBe(false);
+    const token = await open(await startSignIn({ email: "tara@test.local", next: "/account", signup: { name: "Tara Rao", phone: "+919811100001", city: "Pune", causes: ["Food"] } }, ORIGIN));
     const done = await finishSignIn(token);
-    expect(done?.next).toBe("/me");
+    expect(done?.next).toBe("/account");
     expect(await finishSignIn(token)).toBeNull();
-    // Someone typing Tara's mobile with their own email gets their own account, not hers.
-    const other = await startSignIn({ name: "Someone Else", phone: "+919811100001", email: "other@test.local", next: "/me" }, ORIGIN);
-    if (!other.ok || !other.link) throw new Error("no link");
-    const second = await finishSignIn(other.link.split("/").pop()!);
+    expect(await hasAccount("Tara@test.local")).toBe(true);
+    // Someone typing Tara's mobile with their own email gets their own account, not hers or her number.
+    const second = await finishSignIn(await open(await startSignIn({ email: "other@test.local", next: "/me", signup: { name: "Someone Else", phone: "+919811100001" } }, ORIGIN)));
     expect(second!.userId).not.toBe(done!.userId);
-    const [tara] = await query<{ phone: string }>("select phone from users where id = $1", [done!.userId]);
-    expect(tara.phone).toBe("+919811100001");
+    const [tara] = await query<{ phone: string; city: string; saved_causes: string[] }>("select phone, city, saved_causes from users where id = $1", [done!.userId]);
+    expect(tara).toEqual({ phone: "+919811100001", city: "Pune", saved_causes: ["Food"] });
+    // Signing in later needs only the email, and lands on the same account.
+    const again = await finishSignIn(await open(await startSignIn({ email: "tara@test.local", next: "/me" }, ORIGIN)));
+    expect(again!.userId).toBe(done!.userId);
+    // A sign-in link for an email with no account does nothing.
+    expect(await finishSignIn(await open(await startSignIn({ email: "nobody@test.local", next: "/me" }, ORIGIN)))).toBeNull();
+  });
+
+  it("NGO sign-up makes the account and the NGO together, waiting for approval", async () => {
+    const org = { name: "Link Test Trust", city: "Pune", causes: ["Food"], contactName: "Asha Rao", contactRole: "Founder", contactPhone: "+919811100009", registrationNo: null, about: null };
+    const done = await finishSignIn(await open(await startSignIn({ email: "asha@test.local", next: "/dashboard", signup: { name: "Asha Rao", phone: "+919811100009", org } }, ORIGIN)));
+    const mine = await getOrgForUser(done!.userId);
+    expect(mine).toMatchObject({ name: "Link Test Trust", status: "pending", verified_at: null });
   });
 });
 

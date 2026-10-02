@@ -14,7 +14,7 @@ export interface SaveSpotProps {
   slug: string;
   dateId: string;
   signedIn: boolean;
-  /** Open the sheet straight away (coming back from sign-in). */
+  /** Open the sheet straight away (coming back from sign-up or sign-in). */
   autoOpen: boolean;
   title: string;
   orgName: string;
@@ -33,7 +33,7 @@ export interface SaveSpotProps {
 export function SaveSpot(p: SaveSpotProps) {
   const [open, setOpen] = useState(p.autoOpen && p.signedIn);
   const [state, action, pending] = useActionState<SaveState, FormData>(saveSpotAction, {});
-  const signIn = `/signin?next=${encodeURIComponent(`/a/${p.slug}?d=${p.dateId}&save=1`)}`;
+  const signIn = `/signup?next=${encodeURIComponent(`/a/${p.slug}?d=${p.dateId}&save=1`)}`;
   const big = "h-14 w-full text-lg";
 
   return (

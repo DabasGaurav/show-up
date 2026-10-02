@@ -8,7 +8,6 @@ import { buttonVariants } from "@/components/ui/button";
 import { getUser } from "@/lib/auth";
 import { getOrgForUser } from "@/lib/data/orgs";
 import { cn } from "@/lib/utils";
-import { NgoForm } from "./form";
 
 export const metadata: Metadata = { title: "For NGOs" };
 
@@ -18,7 +17,7 @@ const POINTS = [
   { icon: <BellRing />, text: "Reminders go out for you" },
 ];
 
-// NGO sign-up.
+// For NGOs: why, and the way in to sign-up.
 export default async function ForNgos() {
   const user = await getUser();
   if (user && (await getOrgForUser(user.id))) redirect("/dashboard");
@@ -38,16 +37,11 @@ export default async function ForNgos() {
           </ul>
           <HeroPeeps className="mt-8 hidden max-w-xs sm:grid" />
         </div>
-        <div className="rounded-xl bg-card p-5">
-          {user ? (
-            <NgoForm defaults={{ your_name: user.name, phone: user.phone?.replace("+91", "") ?? "" }} />
-          ) : (
-            <div className="text-center">
-              <h2 className="text-2xl">It&apos;s free, and takes two minutes.</h2>
-              <p className="mt-2 text-ink-soft">First, tell us who you are.</p>
-              <Link href="/signin?next=/for-ngos" className={cn(buttonVariants({ size: "tap" }), "mt-5 h-14 w-full text-lg")}>Get started</Link>
-            </div>
-          )}
+        <div className="rounded-xl bg-card p-5 text-center">
+          <h2 className="text-2xl">It&apos;s free, and takes two minutes.</h2>
+          <p className="mt-2 text-ink-soft">Tell us about you and your NGO. We call you within a day.</p>
+          <Link href="/for-ngos/signup" className={cn(buttonVariants({ size: "tap" }), "mt-5 h-14 w-full text-lg")}>Sign up your NGO</Link>
+          {!user && <p className="mt-4">Already signed up? <Link href="/signin?next=/dashboard" className="font-semibold text-primary underline underline-offset-2">Sign in</Link></p>}
         </div>
       </main>
     </>
