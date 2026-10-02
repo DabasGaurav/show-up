@@ -1,4 +1,5 @@
 import "server-only";
+import { now } from "@/lib/clock";
 import { query } from "@/lib/db";
 import { isPrototype } from "@/lib/flags";
 
@@ -59,7 +60,7 @@ export async function notify(m: Message): Promise<boolean> {
       m.type,
       m.channel,
       JSON.stringify(payload),
-      m.dueAt ?? new Date(),
+      m.dueAt ?? (await now()),
       manual ? "manual_pending" : "queued",
       m.dedupeKey ?? null,
     ],
@@ -73,7 +74,7 @@ export async function notify(m: Message): Promise<boolean> {
     sent = await sendEmail(m.to, m.subject ?? "Show-Up", m.link ? `${m.text}\n\n${m.link}` : m.text);
   }
   if (sent) {
-    await query("update notifications set status = 'sent', sent_at = now() where id = $1", [rows[0].id]);
+    await query("update notifications set status = 'sent', sent_at = $2 where id = $1", [rows[0].id, await now()]);
   }
   return true;
 }

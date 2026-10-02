@@ -1,4 +1,5 @@
 import { VerifiedNgoBadge, Chip } from "@/components/badges";
+import { ClockControl } from "@/components/clock-control";
 import { Button } from "@/components/ui/button";
 import { inviteCodes, listOrgs } from "@/lib/data/orgs";
 import { isAdmin } from "@/lib/auth";
@@ -71,6 +72,8 @@ export default async function AdminNgosPage() {
           ))}
         </ul>
       </section>
+
+      {isEnabled("SIMULATED_CLOCK") && <ClockControl path="/admin" />}
 
       {isMvp && (
         <section>

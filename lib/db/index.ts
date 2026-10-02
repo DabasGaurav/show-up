@@ -77,9 +77,11 @@ async function createRemoteDb(url: string): Promise<Db> {
 async function connect(): Promise<Db> {
   const url = process.env.DATABASE_URL;
   if (url) return createRemoteDb(url);
-  const db = await createLocalDb(path.join(process.cwd(), ".data", `pglite-${APP_MODE}`));
+  // Tests use a throwaway in-memory database and seed it themselves.
+  const memory = process.env.SHOWUP_DB === "memory";
+  const db = await createLocalDb(memory ? undefined : path.join(process.cwd(), ".data", `pglite-${APP_MODE}`));
   const fresh = await migrate(db, { local: true });
-  if (fresh && APP_MODE === "prototype") {
+  if (fresh && APP_MODE === "prototype" && !memory) {
     const { seed } = await import("@/supabase/seed");
     await seed(db);
   }

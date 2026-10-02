@@ -2,7 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { S } from "@/lib/strings";
-import { isPrototype } from "@/lib/flags";
+import { MessagePreview } from "@/components/message-preview";
+import { isEnabled, isPrototype } from "@/lib/flags";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             {isPrototype && <p>{S.footer.prototype}</p>}
           </div>
         </footer>
+        {isEnabled("MESSAGE_PREVIEW") && <MessagePreview />}
       </body>
     </html>
   );
