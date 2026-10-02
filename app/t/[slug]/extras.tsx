@@ -19,17 +19,17 @@ export async function TaskExtras({ task }: { task: TaskWithOrg; userId: string |
   return (
     <div className="mt-4 space-y-4">
       <section className="rounded-xl border bg-card p-4" aria-labelledby="ngo-profile">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 id="ngo-profile" className="font-semibold">{p.name}</h2>
+        <h2 id="ngo-profile" className="font-semibold">{p.name}</h2>
+        <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
           {p.verified ? (
-            <span className="flex flex-col items-end">
+            <>
               <VerifiedNgoBadge />
-              <span className="mt-0.5 text-xs text-muted-foreground">{S.badges.verifiedNgoTooltip}</span>
-            </span>
+              {S.badges.verifiedNgoTooltip}
+            </>
           ) : (
             <Chip tone="grey">Not verified yet</Chip>
           )}
-        </div>
+        </p>
         <div className="mt-3 grid grid-cols-3 gap-2">
           {p.photos.slice(0, 3).map((t, i) => <NgoPhoto key={t} token={t} alt={`${p.name}, illustration ${i + 1}`} />)}
         </div>

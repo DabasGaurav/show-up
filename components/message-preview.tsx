@@ -13,6 +13,7 @@ interface Msg {
   payload: { to: string | null; text: string; link: string | null };
   due_at: string;
   user_name: string | null;
+  mine: boolean;
 }
 
 const CHANNEL = { sms: "SMS", whatsapp: "WhatsApp", email: "Email", in_app: "In-app" } as const;
@@ -22,6 +23,7 @@ export function MessagePreview() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[] | null>(null);
+  const [scope, setScope] = useState<"mine" | "all">("mine");
 
   const load = useCallback(async () => {
     const res = await fetch("/api/messages", { cache: "no-store" });
@@ -40,6 +42,8 @@ export function MessagePreview() {
       window.removeEventListener("keydown", onKey);
     };
   }, [open, load]);
+
+  const shown = messages?.filter((m) => scope === "all" || m.mine);
 
   // Team screens have their own controls; the panel is for the app itself.
   if (pathname.startsWith("/lab") || pathname.startsWith("/admin")) return null;
@@ -74,10 +78,28 @@ export function MessagePreview() {
                 <X className="size-5" aria-hidden />
               </button>
             </header>
+            <div className="grid grid-cols-2 gap-1 border-b bg-muted p-1" role="tablist" aria-label="Whose messages">
+              {(["mine", "all"] as const).map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  role="tab"
+                  aria-selected={scope === k}
+                  onClick={() => setScope(k)}
+                  className={`min-h-11 rounded-md text-sm font-medium ${scope === k ? "bg-card text-brand shadow-sm" : ""}`}
+                >
+                  {k === "mine" ? "This account" : "Everyone"}
+                </button>
+              ))}
+            </div>
             <ul className="flex-1 space-y-3 overflow-y-auto p-4">
               {messages === null && <li className="text-sm text-muted-foreground">Loading…</li>}
-              {messages?.length === 0 && <li className="text-sm text-muted-foreground">No messages yet.</li>}
-              {messages?.map((m) => (
+              {shown?.length === 0 && (
+                <li className="text-sm text-muted-foreground">
+                  {scope === "mine" ? "No messages for this account yet. Switch to Everyone to see all messages." : "No messages yet."}
+                </li>
+              )}
+              {shown?.map((m) => (
                 <li key={m.id} className="rounded-xl border bg-card p-3 text-sm">
                   <p className="flex flex-wrap items-center justify-between gap-x-2 text-xs text-muted-foreground">
                     <span className="font-semibold text-brand">{CHANNEL[m.channel]} · {MESSAGE_LABEL[m.type] ?? m.type}</span>

@@ -77,7 +77,7 @@ export function TaskCard({
                 href={data.mapUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="ml-2 inline-flex min-h-11 items-center text-brand underline underline-offset-2"
+                className="flex min-h-11 w-fit items-center text-brand underline underline-offset-2"
               >
                 Open map
               </a>

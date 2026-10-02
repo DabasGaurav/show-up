@@ -160,7 +160,7 @@ async function prepare(id: ScenarioId, origin: string): Promise<{ userId: string
       await query(
         `update bookings set released_at = case when release_reason = 'work' then $2::timestamptz else $3::timestamptz end
          where occurrence_id = $1 and status = 'released_early'`,
-        [SEED_IDS.sh7Occurrence, new Date(at.getTime() - 7 * HOUR_MS), new Date(at.getTime() - HOUR_MS)],
+        [SEED_IDS.sh7Occurrence, new Date(at.getTime() - 14 * HOUR_MS), new Date(at.getTime() - HOUR_MS)],
       );
       await query(
         `update standby_offers set sent_at = $2, expires_at = $3 where occurrence_id = $1 and status = 'sent'`,
