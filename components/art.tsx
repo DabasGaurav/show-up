@@ -74,6 +74,12 @@ export function HeroPeeps({ className, hrefFor, selected = [] }: { className?: s
   );
 }
 
+/** The volunteer drawn for one cause, on a clear background. */
+export function CausePeep({ cause, className }: { cause: string; className?: string }) {
+  const p = (BY_CAUSE.find((c) => c.cause === cause) ?? BY_CAUSE[0]).p;
+  return <One p={{ ...p, bg: "transparent" }} className={cn("aspect-square rounded-none", className)} />;
+}
+
 /** A strip of people on a soft colour: the cover of an activity or an NGO page. */
 export function Peeps({ cause, className }: { cause: string; className?: string }) {
   const start = [...(cause || "x")].reduce((a, c) => a + c.charCodeAt(0), 0) % CAST.length;

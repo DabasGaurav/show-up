@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CalendarCheck, Users } from "lucide-react";
 import { ActivityCard } from "@/components/activity-card";
-import { Peeps } from "@/components/art";
+import { CauseImage } from "@/components/cause-image";
 import { Avatar, CauseChip, Tick } from "@/components/kit";
 import { Header } from "@/components/site-header";
 import { cardOf } from "@/lib/activity-view";
@@ -29,7 +29,7 @@ export default async function NgoPage(props: PageProps<"/ngo/[slug]">) {
       <Header />
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-2">
         <div className="overflow-hidden rounded-xl bg-card">
-          <Peeps cause={org.causes[0] ?? ""} className="h-32" />
+          <CauseImage cause={org.causes[0] ?? ""} sizes="(min-width: 1024px) 672px, 100vw" priority className="h-44 sm:h-56" />
           <div className="p-5">
             <div className="flex items-center gap-3">
               <Avatar name={org.name} className="size-12 text-base" />

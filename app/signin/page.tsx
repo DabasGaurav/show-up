@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Sign in or sign up" };
 // One page for volunteers: sign in if we know the email, sign up if we don't.
 export default async function SignInPage(props: PageProps<"/signin">) {
   const { next, expired } = await props.searchParams;
-  const target = safeNext(typeof next === "string" ? next : null);
+  const target = safeNext(typeof next === "string" ? next : null, "/start");
   if (await getUser()) redirect(target);
   return (
     <>

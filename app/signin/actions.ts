@@ -28,7 +28,7 @@ const str = (v: FormDataEntryValue | null) => (typeof v === "string" ? v.trim() 
 /** One door for volunteers: an email we know gets a sign-in link, a new one gets asked for details and then its link. */
 export async function signInAction(_prev: SignInState, form: FormData): Promise<SignInState> {
   const email = str(form.get("email")).toLowerCase();
-  const next = safeNext(str(form.get("next")));
+  const next = safeNext(str(form.get("next")), "/start");
   if (!/^\S+@\S+\.\S+$/.test(email)) return { error: "That email doesn't look right.", email };
 
   // Test accounts (TEST_LOGINS on the host) sign in straight away, with no email link.

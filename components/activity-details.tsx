@@ -1,5 +1,5 @@
 import { CalendarDays, CircleCheckBig, Hand, Laptop, MapPin, Phone, Repeat, Users } from "lucide-react";
-import { Peeps } from "@/components/art";
+import { CauseImage } from "@/components/cause-image";
 import { Avatar, CauseChip, DetailRow, SpotsDots, Tick } from "@/components/kit";
 import { cn } from "@/lib/utils";
 
@@ -41,7 +41,7 @@ export function ActivityDetails({ data, heading: Heading = "h1", className }: { 
   );
   return (
     <article className={cn("overflow-hidden rounded-xl bg-card", className)}>
-      <Peeps cause={data.cause} className="h-32" />
+      <CauseImage cause={data.cause} sizes="(min-width: 1024px) 672px, 100vw" priority className="h-44 sm:h-56" />
       <div className="p-5">
         <CauseChip cause={data.cause || "Cause"} />
         <Heading className="mt-3 text-3xl leading-9 text-balance">{blank(data.title, "Your activity title")}</Heading>

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Clock, MapPin, Video } from "lucide-react";
-import { CauseChip, DateBlock, SpotsDots, Tick } from "@/components/kit";
-import { dateBlock, fmtDuration, fmtTimeRange } from "@/lib/format";
+import { CauseImage } from "@/components/cause-image";
+import { CauseChip, SpotsDots, Tick } from "@/components/kit";
+import { fmtDayDate, fmtDuration, fmtTimeRange } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export interface ActivityCardData {
@@ -20,12 +21,13 @@ export interface ActivityCardData {
   taken: number;
 }
 
-/** Activity card: date block, title, cause, NGO with ✓, time, place, spots left. */
+/** Activity card: the cause's picture, date, title, NGO with ✓, time, place, cause, spots left. */
 export function ActivityCard({ a, href, right, footer, className }: { a: ActivityCardData; href?: string; right?: React.ReactNode; footer?: React.ReactNode; className?: string }) {
   const body = (
     <div className="flex gap-3.5">
-      <DateBlock {...dateBlock(a.start)} className="self-start" />
+      <CauseImage cause={a.cause} vary={a.title} sizes="(min-width: 640px) 128px, 96px" className="min-h-28 w-24 shrink-0 self-stretch rounded-lg sm:w-32" />
       <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-primary">{fmtDayDate(a.start)}</p>
         <div className="flex items-start justify-between gap-2">
           <h3 className="text-lg leading-6 text-balance">{a.title}</h3>
           {right}
@@ -52,7 +54,7 @@ export function ActivityCard({ a, href, right, footer, className }: { a: Activit
     </div>
   );
   return (
-    <article className={cn("min-w-0 overflow-hidden rounded-xl bg-card p-4 transition-shadow duration-150", href && "hover:ring-2 hover:ring-primary/20", className)}>
+    <article className={cn("min-w-0 overflow-hidden rounded-xl border border-border/70 bg-card p-3 shadow-card transition-shadow duration-150 sm:p-4", href && "hover:ring-2 hover:ring-primary/20", className)}>
       {href ? <Link href={href} className="block">{body}</Link> : body}
       {footer}
     </article>

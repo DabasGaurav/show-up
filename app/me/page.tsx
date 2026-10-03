@@ -8,7 +8,9 @@ import { Header } from "@/components/site-header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
 import { REASON_PHRASE } from "@/lib/constants";
+import { cardOf as activityCard } from "@/lib/activity-view";
 import { listSpotsForUser, type Spot } from "@/lib/data/bookings";
+import { listUpcoming } from "@/lib/data/tasks";
 import { fmtDayTime, fmtPhone, mapLink } from "@/lib/format";
 import { volunteerPill } from "@/lib/labels";
 import { ACTIVE, canSayYes, freeBy, trackRecord } from "@/lib/rules";
@@ -67,6 +69,11 @@ export default async function MyPlans() {
   const spots = await listSpotsForUser(user.id);
   const upcoming = spots.filter((s) => s.start_at.getTime() > at.getTime() && (ACTIVE.includes(s.status) || s.status === "released_early" || s.status === "released_late"));
   const past = spots.filter((s) => s.start_at.getTime() <= at.getTime() && (s.status === "attended" || s.status === "no_show" || ACTIVE.includes(s.status))).reverse();
+  // Activities this person hasn't got a spot on yet: their city and causes first.
+  const held = new Set(spots.filter((s) => ACTIVE.includes(s.status)).map((s) => s.activity_id));
+  const open = (await listUpcoming(at)).filter((a) => !held.has(a.id) && a.taken < a.slots_needed);
+  const fit = (a: (typeof open)[number]) => (a.mode === "online" || a.city === user.city ? 1 : 0) + (user.saved_causes.includes(a.cause) ? 1 : 0);
+  const more = [...open].sort((a, b) => fit(b) - fit(a)).slice(0, 4);
   const record = trackRecord(spots.map((s) => ({ status: s.status, startAt: s.start_at })));
 
   return (
@@ -98,6 +105,18 @@ export default async function MyPlans() {
               </li>
             ))}
           </ul>
+        )}
+
+        {more.length > 0 && (
+          <section className="mt-8" aria-labelledby="more">
+            <div className="flex items-end justify-between gap-3">
+              <h2 id="more" className="text-2xl">New activities you can join</h2>
+              <Link href="/#results" className="flex min-h-11 shrink-0 items-center text-sm font-semibold text-primary underline underline-offset-2">See all {open.length}</Link>
+            </div>
+            <ul className="mt-3 space-y-3">
+              {more.map((a) => <li key={a.id}><ActivityCard a={activityCard(a)} href={`/a/${a.share_slug}`} /></li>)}
+            </ul>
+          </section>
         )}
 
         {past.length > 0 && (
