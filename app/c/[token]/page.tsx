@@ -6,6 +6,7 @@ import { OnePeep } from "@/components/art";
 import { DateBlock, Pill } from "@/components/kit";
 import { Brand } from "@/components/site-header";
 import { buttonVariants } from "@/components/ui/button";
+import { getUser } from "@/lib/auth";
 import { getSpotByToken } from "@/lib/data/bookings";
 import { dateBlock, fmtDayTime, fmtTimeRange, fmtWeekday } from "@/lib/format";
 import { volunteerPill } from "@/lib/labels";
@@ -24,6 +25,10 @@ export default async function CheckInPage(props: PageProps<"/c/[token]">) {
   const s = await getSpotByToken(token);
   if (!s) notFound();
 
+  // This page only reads the link's token. It never signs anyone in or out.
+  const viewer = await getUser();
+  const mine = viewer?.id === s.user_id;
+  const first = s.user_name.split(" ")[0];
   const pill = volunteerPill(s.status);
   const open = ACTIVE.includes(s.status) && at.getTime() < s.start_at.getTime();
   const freed = s.status === "released_early" || s.status === "released_late";
@@ -40,10 +45,16 @@ export default async function CheckInPage(props: PageProps<"/c/[token]">) {
       <header>
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           <Brand />
-          <Link href="/me" className="flex min-h-11 items-center rounded-full px-3 text-sm font-semibold text-primary hover:bg-primary-soft">My plans</Link>
+          {mine && <Link href="/me" prefetch={false} className="flex min-h-11 items-center rounded-full px-3 text-sm font-semibold text-primary hover:bg-primary-soft">My plans</Link>}
         </div>
       </header>
       <main className="mx-auto w-full max-w-md flex-1 px-4 py-4 lg:py-10">
+        {viewer && !mine && (
+          <p role="status" className="mb-4 rounded-xl bg-accent-soft px-4 py-3 text-sm font-medium">
+            This is {first}&apos;s spot. You&apos;re still signed in as {viewer.name}.
+          </p>
+        )}
+        <p className="mb-1 font-semibold text-ink-soft">Hi {first},</p>
         <h1 className="text-4xl leading-10 text-balance">{heading}</h1>
         {open && s.status === "confirmed" && <p className="mt-2 text-ink-soft">We&apos;ll email the details on the morning.</p>}
         {freed && <p className="mt-2 text-ink-soft">Thanks for telling {s.org_name}.</p>}
@@ -70,7 +81,7 @@ export default async function CheckInPage(props: PageProps<"/c/[token]">) {
           <section className="mt-6 text-center">
             <OnePeep index={freed ? 1 : 4} />
             {s.status === "no_show" && <p className="mt-2 text-ink-soft">{s.org_name} marked that you didn&apos;t come.</p>}
-            <Link href={freed ? "/" : "/me"} className={cn(buttonVariants({ size: "tap", variant: "outline" }), "mt-4")}>{freed ? "Find something else" : "See my plans"}</Link>
+            <Link href={freed || !mine ? "/" : "/me"} prefetch={false} className={cn(buttonVariants({ size: "tap", variant: "outline" }), "mt-4")}>{freed ? "Find something else" : mine ? "See my plans" : "See what's on"}</Link>
           </section>
         )}
       </main>

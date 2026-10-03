@@ -62,10 +62,13 @@ export interface User {
 }
 
 export async function signIn(userId: string): Promise<void> {
+  // Signing in or out always ends any "Viewing as": you are then exactly who you signed in as.
+  (await cookies()).delete(AS_COOKIE);
   (await cookies()).set(USER_COOKIE, seal(userId), cookieOpts);
 }
 
 export async function signOut(): Promise<void> {
+  (await cookies()).delete(AS_COOKIE);
   (await cookies()).delete(USER_COOKIE);
 }
 

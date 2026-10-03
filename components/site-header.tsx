@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { NavLinks } from "@/components/nav-links";
-import { ViewAsBar } from "@/components/view-as-bar";
 import { getUser } from "@/lib/auth";
 
 export function Brand() {
@@ -18,7 +17,6 @@ export async function Header() {
   const user = await getUser();
   return (
     <header>
-      <ViewAsBar />
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-3">
         <Brand />
         <NavLinks signedIn={Boolean(user)} isNgo={user?.role === "ngo_member"} />

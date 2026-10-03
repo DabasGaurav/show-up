@@ -9,6 +9,8 @@ import { siteUrl } from "@/lib/site";
 
 export interface SignInState {
   sent?: boolean;
+  /** Signed in: the page to load next. */
+  go?: string;
   /** Someone new: the same form now asks for their details. */
   isNew?: boolean;
   email?: string;
@@ -33,7 +35,8 @@ export async function signInAction(_prev: SignInState, form: FormData): Promise<
   const testUser = await testLogin(email);
   if (testUser) {
     await signIn(testUser);
-    redirect(`${next}${next.includes("?") ? "&" : "?"}toast=in`);
+    // The browser loads the next page itself, so it is always asked for as the signed-in person.
+    return { go: `${next}${next.includes("?") ? "&" : "?"}toast=in`, email };
   }
 
   if (await hasAccount(email)) {

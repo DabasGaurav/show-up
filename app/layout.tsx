@@ -3,6 +3,7 @@ import { Fraunces, Inter } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 import { Toaster } from "@/components/toaster";
+import { ViewAsBar } from "@/components/view-as-bar";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap" });
 const fraunces = Fraunces({ variable: "--font-fraunces", subsets: ["latin"], weight: ["600", "700"], display: "swap" });
@@ -21,6 +22,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${inter.variable} ${fraunces.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
+        {/* On every page, so the team can never forget they are looking at someone else's account. */}
+        <ViewAsBar />
         <div className="flex flex-1 flex-col">{children}</div>
         <footer className="px-4 pt-10 pb-28 text-sm text-ink-soft">
           <div className="mx-auto max-w-5xl">
