@@ -19,6 +19,20 @@ Locally no email is sent: the sign-in link is shown on screen and other emails a
 
 `npm run seed` refuses to run in production or against a hosted database.
 
+## For teammates
+
+You can build and test everything on your own computer with no passwords or keys: the site makes its own local database.
+
+```bash
+git clone https://github.com/DabasGaurav/show-up.git
+cd show-up
+npm install
+npm run dev              # http://localhost:3000
+npm run listings:import  # in a second window: loads the launch listings locally
+```
+
+Send your changes as a pull request. Putting them on the live site needs the live settings (database address, session secret, admin passcode, email key). Those are **not** in this repository and never should be: ask Gaurav for the two settings files (`.env.neon`, `.env.hosted-mvp`) over a private channel and put them in the project folder. Git ignores them.
+
 ## Pages
 
 | Who | Page |
