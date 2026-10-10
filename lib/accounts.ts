@@ -21,10 +21,17 @@ export async function createAccount(a: NewAccount): Promise<string | null> {
   const email = a.email.trim().toLowerCase();
   if (await queryOne("select 1 as taken from users where lower(email) = $1", [email])) return null;
   const phoneFree = Boolean(a.phone) && (await queryOne("select 1 as taken from users where phone = $1", [a.phone])) === null;
-  const [u] = await query<{ id: string }>(
-    "insert into users (name, email, password_hash, phone, city, saved_causes) values ($1, $2, $3, $4, $5, $6) returning id",
-    [a.name, email, hashPassword(a.password), phoneFree ? a.phone : null, a.city ?? null, a.causes ?? []],
-  );
+  let u: { id: string };
+  try {
+    [u] = await query<{ id: string }>(
+      "insert into users (name, email, password_hash, phone, city, saved_causes) values ($1, $2, $3, $4, $5, $6) returning id",
+      [a.name, email, hashPassword(a.password), phoneFree ? a.phone : null, a.city ?? null, a.causes ?? []],
+    );
+  } catch (e) {
+    // Two sign-ups for the same email (or mobile) at the same moment: the database lets only one through.
+    if (/unique|duplicate/i.test((e as Error).message)) return null;
+    throw e;
+  }
   if (a.org) await createOrg(u.id, a.org);
   return u.id;
 }

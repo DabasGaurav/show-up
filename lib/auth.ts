@@ -136,7 +136,10 @@ export async function isAdmin(): Promise<boolean> {
   return id ? (await queryOne<{ role: string }>("select role from users where id = $1", [id]))?.role === "admin" : false;
 }
 
-/** Only allow same-site relative redirects. */
+/**
+ * Only allow moves within this site: a path that starts with one "/". Anything a
+ * browser could read as another site ("//x", "/\\x", or with hidden characters) is refused.
+ */
 export function safeNext(next: string | undefined | null, fallback = "/me"): string {
-  return next && next.startsWith("/") && !next.startsWith("//") ? next : fallback;
+  return next && /^\/(?![/\\])[^\\\u0000-\u001f\u007f]*$/.test(next) ? next : fallback;
 }

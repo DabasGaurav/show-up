@@ -27,7 +27,7 @@ export async function saveSpotAction(_prev: SaveState, form: FormData): Promise<
   if (!user.phone) {
     const name = String(form.get("name") ?? "").trim();
     const phone = normalisePhone(String(form.get("phone") ?? ""));
-    if (name.length < 2) return { error: "Please add your name." };
+    if (name.length < 2 || name.length > 80) return { error: name.length < 2 ? "Please add your name." : "That name is too long." };
     if (!phone) return { error: "That number doesn't look right. It should have 10 digits." };
     if (await queryOne("select 1 as taken from users where phone = $1 and id <> $2", [phone, user.id])) return { error: "That number is on another account." };
     await query("update users set name = $2, phone = $3, phone_verified_at = null where id = $1", [user.id, name, phone]);

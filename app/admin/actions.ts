@@ -13,6 +13,7 @@ import { createActivity } from "@/lib/data/tasks";
 import { query, queryOne } from "@/lib/db";
 import { istToDate, normalisePhone } from "@/lib/format";
 import { readPlace } from "@/lib/place";
+import { LIMITS, note, tooMany, visitor } from "@/lib/rate-limit";
 import { DAY_MS } from "@/lib/rules";
 
 const str = (v: FormDataEntryValue | null) => (typeof v === "string" ? v.trim() : "");
@@ -22,7 +23,12 @@ const guard = async () => {
 const back = (path: string, error: string): never => redirect(`${path}${path.includes("?") ? "&" : "?"}e=${encodeURIComponent(error)}`);
 
 export async function unlockAction(_prev: { error?: string }, form: FormData): Promise<{ error?: string }> {
-  if (!(await unlockAdmin(String(form.get("passcode") ?? "")))) return { error: "That's not it. Try again." };
+  const who = `admin-from:${await visitor()}`;
+  if (await tooMany(who, LIMITS.adminTries.max, LIMITS.adminTries.minutes)) return { error: "Too many tries. Wait 15 minutes, then try again." };
+  if (!(await unlockAdmin(String(form.get("passcode") ?? "")))) {
+    await note(who);
+    return { error: "That's not it. Try again." };
+  }
   redirect("/admin");
 }
 

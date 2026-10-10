@@ -4,9 +4,10 @@ import { redirect } from "next/navigation";
 import { createAccount, login } from "@/lib/accounts";
 import { safeNext, signIn, signOut } from "@/lib/auth";
 import { CAUSES } from "@/lib/constants";
-import { MIN_PASSWORD } from "@/lib/password";
 import { readPlace } from "@/lib/place";
+import { LIMITS, forget, note, tooMany, visitor } from "@/lib/rate-limit";
 import { testLogin } from "@/lib/signin";
+import { isEmail, nameProblem, passwordProblem } from "@/lib/validate";
 
 export interface SignInState {
   /** Signed in: the page to load next. */
@@ -21,7 +22,6 @@ export interface SignInState {
 }
 
 const str = (v: FormDataEntryValue | null) => (typeof v === "string" ? v.trim() : "");
-const isEmail = (e: string) => /^\S+@\S+\.\S+$/.test(e);
 // The browser loads the next page itself, so it is always asked for as the signed-in person.
 const onward = (next: string) => `${next}${next.includes("?") ? "&" : "?"}toast=in`;
 
@@ -39,12 +39,21 @@ export async function signInAction(_prev: SignInState, form: FormData): Promise<
     return { go: onward(next) };
   }
 
-  const res = await login(email, String(form.get("password") ?? ""));
+  // Slow down guessing: a pause after too many wrong passwords for one email, or from one visitor.
+  const who = await visitor();
+  const keys = [`wrong:${email}`, `wrong-from:${who}`];
+  if ((await tooMany(keys[0], LIMITS.wrongPasswords.max, LIMITS.wrongPasswords.minutes)) || (await tooMany(keys[1], LIMITS.wrongFromVisitor.max, LIMITS.wrongFromVisitor.minutes))) {
+    return { error: "Too many tries. Wait 15 minutes, then try again.", fields };
+  }
+  const password = String(form.get("password") ?? "");
+  const res = password.length > 200 ? ({ ok: false, why: "wrong" } as const) : await login(email, password);
   if (res.ok) {
+    await forget(keys[0]);
     await signIn(res.userId);
     return { go: onward(next) };
   }
   if (res.why === "unknown") return { hint: "new", fields };
+  for (const k of keys) await note(k);
   if (res.why === "no_password") return { error: "This account has no password yet. Write to us and we'll set one for you.", fields };
   return { error: "That password isn't right. Try again.", fields };
 }
@@ -58,13 +67,15 @@ export async function signUpAction(_prev: SignInState, form: FormData): Promise<
   const causes = form.getAll("causes").map(String).filter((c) => (CAUSES as readonly string[]).includes(c));
   const city = readPlace(form, true);
   const fail = (error: string): SignInState => ({ error, fields, causes, place: city ?? fields.city_other });
-  if (fields.name.length < 2) return fail("Please add your name.");
-  if (!isEmail(email)) return fail("That email doesn't look right.");
-  if (password.length < MIN_PASSWORD) return fail(`Choose a password with at least ${MIN_PASSWORD} characters.`);
+  const problem = nameProblem(fields.name) ?? (isEmail(email) ? null : "That email doesn't look right.") ?? passwordProblem(password);
+  if (problem) return fail(problem);
   if (!city) return fail("Pick your city, or type your town.");
+  const who = `signup-from:${await visitor()}`;
+  if (await tooMany(who, LIMITS.signUps.max, LIMITS.signUps.minutes)) return fail("Too many new accounts from here just now. Try again in an hour.");
   // The mobile number is asked for later, on the first spot they save.
   const userId = await createAccount({ name: fields.name, email, password, city, causes });
   if (!userId) return { ...fail(""), error: undefined, hint: "existing" };
+  await note(who);
   await signIn(userId);
   return { go: onward(next) };
 }

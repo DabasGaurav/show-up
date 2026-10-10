@@ -3,7 +3,7 @@ import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 
 // Passwords are never stored. We keep a salted scrypt hash and compare against that.
 
-export const MIN_PASSWORD = 8;
+export { MIN_PASSWORD } from "@/lib/password-rules";
 
 export function hashPassword(password: string): string {
   const salt = randomBytes(16);
