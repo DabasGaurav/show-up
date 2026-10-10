@@ -1,12 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Inter } from "next/font/google";
+import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import Link from "next/link";
 import "./globals.css";
 import { Toaster } from "@/components/toaster";
 import { ViewAsBar } from "@/components/view-as-bar";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap" });
-const fraunces = Fraunces({ variable: "--font-fraunces", subsets: ["latin"], weight: ["600", "700"], display: "swap" });
+// Kept in the project (from @fontsource-variable/fraunces, OFL licence) so builds don't depend on downloading it.
+const fraunces = localFont({ src: "./fonts/fraunces-latin-wght-normal.woff2", variable: "--font-fraunces", weight: "100 900", display: "swap" });
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
