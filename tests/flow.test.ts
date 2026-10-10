@@ -8,6 +8,7 @@ import { runJobs } from "@/lib/jobs";
 import { HOUR_MS, DAY_MS, showUpRate, trackRecord } from "@/lib/rules";
 import { finishSignIn, hasAccount, startSignIn } from "@/lib/signin";
 import fs from "node:fs";
+import { createAccount, login, setPassword } from "@/lib/accounts";
 import { importListings, type Listings } from "@/lib/import-listings";
 import { sendEmail } from "@/lib/notify";
 import { seed, seedAllowed } from "@/supabase/seed";
@@ -253,6 +254,32 @@ describe("sample data", () => {
     expect(seedAllowed()).toBe(false);
     await expect(seed(T0)).rejects.toThrow("local testing only");
     delete process.env.DATABASE_URL;
+  });
+});
+
+describe("sign up and sign in with a password", () => {
+  it("creates the account at once, signs in with the right password only, and never stores the password", async () => {
+    const id = await createAccount({ name: "Meera Nair", email: "Meera@test.local", password: "correct horse", city: "Pune", causes: ["Food"] });
+    expect(id).toBeTruthy();
+    expect(await createAccount({ name: "Someone", email: "meera@test.local", password: "another one" })).toBeNull();
+    expect(await login("meera@test.local", "correct horse")).toEqual({ ok: true, userId: id });
+    expect(await login("MEERA@test.local", "wrong password")).toEqual({ ok: false, why: "wrong" });
+    expect(await login("nobody@test.local", "whatever1")).toEqual({ ok: false, why: "unknown" });
+    const [row] = await query<{ password_hash: string }>("select password_hash from users where id = $1", [id]);
+    expect(row.password_hash).toMatch(/^scrypt\$/);
+    expect(row.password_hash).not.toContain("correct horse");
+    await setPassword(id!, "a new password");
+    expect((await login("meera@test.local", "correct horse")).ok).toBe(false);
+    expect((await login("meera@test.local", "a new password")).ok).toBe(true);
+  });
+
+  it("NGO sign-up makes the account and the NGO together, waiting for approval", async () => {
+    const org = { name: "Password Test Trust", city: "Pune", causes: ["Food"], contactName: "Asha Rao", contactRole: "Founder", contactPhone: "+919811100019", registrationNo: null, about: null };
+    const id = await createAccount({ name: "Asha Rao", email: "asha2@test.local", password: "long enough", phone: "+919811100019", org });
+    expect(await getOrgForUser(id!)).toMatchObject({ name: "Password Test Trust", status: "pending" });
+    // An account made before passwords can't be opened by guessing.
+    const old = await person("Old Account");
+    expect(await login(old.email!, "anything12")).toEqual({ ok: false, why: "no_password" });
   });
 });
 

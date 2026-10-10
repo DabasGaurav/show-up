@@ -13,7 +13,7 @@ import { fmtDayDate, fmtPhone, fmtTime } from "@/lib/format";
 import { showUpRate, trackRecord } from "@/lib/rules";
 import { cn } from "@/lib/utils";
 import { query } from "@/lib/db";
-import { decideOrgAction, messageDoneAction, saveSpotAction, toggleActivityAction, viewAsAction } from "./actions";
+import { decideOrgAction, messageDoneAction, saveSpotAction, setPasswordAction, toggleActivityAction, viewAsAction } from "./actions";
 import { AdminShell, adminError } from "./shell";
 import { UnlockForm } from "./unlock-form";
 
@@ -192,6 +192,14 @@ async function Volunteers() {
               <input type="hidden" name="user" value={p.id} />
               <Button type="submit" size="tap" variant="outline" className="h-11">Open My plans as {p.name.split(" ")[0]}</Button>
             </form>
+            <details className="w-full">
+              <summary className="min-h-11 cursor-pointer text-sm font-semibold text-primary">Set a new password</summary>
+              <form action={setPasswordAction} className="mt-1 flex flex-wrap gap-2">
+                <input type="hidden" name="user" value={p.id} />
+                <input name="password" type="text" autoComplete="off" minLength={8} required aria-label={`New password for ${p.name}`} placeholder="At least 8 characters" className="h-11 min-w-0 flex-1 rounded-xl border border-input bg-card px-4" />
+                <Button type="submit" size="tap" variant="outline" className="h-11">Save</Button>
+              </form>
+            </details>
           </li>
         ))}
       </ul>

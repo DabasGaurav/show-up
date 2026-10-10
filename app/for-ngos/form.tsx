@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
-import { CheckEmail } from "@/components/check-email";
+import { useActionState, useEffect, useState } from "react";
 import { ChipChecks, Field, FormError, Select, TextArea, TextInput } from "@/components/forms/field";
 import { PlaceField } from "@/components/forms/place-field";
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,16 @@ const group = "text-sm font-semibold tracking-wide text-ink-soft uppercase";
 export function NgoForm({ signedIn, defaults }: { signedIn: boolean; defaults: { your_name: string; phone: string } }) {
   const [state, action, pending] = useActionState<NgoState, FormData>(ngoSignUpAction, {});
   const [same, setSame] = useState(true);
-  if (state.sent) return <CheckEmail email={state.email} link={state.link} />;
+  useEffect(() => {
+    if (state.go) window.location.assign(state.go);
+  }, [state.go]);
+  if (state.go) {
+    return (
+      <p role="status" className="py-6 text-center text-lg font-semibold">
+        Thanks! <a href={state.go} className="text-primary underline underline-offset-2">Carry on</a>
+      </p>
+    );
+  }
   const f: Record<string, string | undefined> = { ...defaults, ...state.fields };
   return (
     <form action={action} className="space-y-4">
@@ -31,9 +39,14 @@ export function NgoForm({ signedIn, defaults }: { signedIn: boolean; defaults: {
         <Field label="WhatsApp number" htmlFor="whatsapp"><TextInput id="whatsapp" name="whatsapp" type="tel" inputMode="numeric" defaultValue={f.whatsapp} required /></Field>
       )}
       {!signedIn && (
-        <Field label="Email" htmlFor="email" hint="You'll sign in with a link we send here">
-          <TextInput id="email" name="email" type="email" autoComplete="email" defaultValue={f.email} required />
-        </Field>
+        <>
+          <Field label="Email" htmlFor="email" hint="You'll sign in with this">
+            <TextInput id="email" name="email" type="email" autoComplete="email" defaultValue={f.email} required />
+          </Field>
+          <Field label="Choose a password" htmlFor="password" hint="At least 8 characters">
+            <TextInput id="password" name="password" type="password" autoComplete="new-password" minLength={8} required />
+          </Field>
+        </>
       )}
       <p className={`${group} pt-2`}>About your NGO</p>
       <Field label="NGO name" htmlFor="ngo_name"><TextInput id="ngo_name" name="ngo_name" defaultValue={f.ngo_name} required /></Field>

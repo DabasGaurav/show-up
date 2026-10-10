@@ -1,18 +1,17 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { getUser } from "@/lib/auth";
+import { getUser, signIn } from "@/lib/auth";
 import { CAUSES, HEARD_FROM } from "@/lib/constants";
 import { readPlace } from "@/lib/place";
 import { createOrg, getOrgForUser } from "@/lib/data/orgs";
 import { normalisePhone } from "@/lib/format";
-import { hasAccount, startSignIn } from "@/lib/signin";
-import { siteUrl } from "@/lib/site";
+import { createAccount } from "@/lib/accounts";
+import { MIN_PASSWORD } from "@/lib/password";
 
 export interface NgoState {
-  sent?: boolean;
-  email?: string;
-  link?: string | null;
+  /** Signed up and signed in: the page to load next. */
+  go?: string;
   error?: string;
   exists?: boolean;
   fields?: Record<string, string>;
@@ -23,7 +22,7 @@ export interface NgoState {
 
 const str = (v: FormDataEntryValue | null) => (typeof v === "string" ? v.trim() : "");
 
-/** NGO sign-up. Someone new gets their account and their NGO in one go, once they open the email link. */
+/** NGO sign-up. Someone new gets their account and their NGO in one go, and is signed in straight away. */
 export async function ngoSignUpAction(_prev: NgoState, form: FormData): Promise<NgoState> {
   const user = await getUser();
   if (user && (await getOrgForUser(user.id))) redirect("/dashboard");
@@ -41,6 +40,8 @@ export async function ngoSignUpAction(_prev: NgoState, form: FormData): Promise<
   if (!sameWhatsapp && !whatsapp) return fail("That WhatsApp number doesn't look right. It should have 10 digits.");
   const email = fields.email.toLowerCase();
   if (!user && !/^\S+@\S+\.\S+$/.test(email)) return fail("That email doesn't look right.");
+  const password = String(form.get("password") ?? "");
+  if (!user && password.length < MIN_PASSWORD) return fail(`Choose a password with at least ${MIN_PASSWORD} characters.`);
   if (fields.ngo_name.length < 3) return fail("Please add your NGO's name.");
   if (!place) return fail("Pick your city, or type your town or village.");
   if (causes.length === 0) return fail("Pick at least one cause.");
@@ -54,8 +55,9 @@ export async function ngoSignUpAction(_prev: NgoState, form: FormData): Promise<
     await createOrg(user.id, org);
     redirect("/dashboard?toast=sent");
   }
-  if (await hasAccount(email)) return { ...fail(""), error: undefined, exists: true };
-  const res = await startSignIn({ email, next: "/dashboard", signup: { name: fields.your_name, phone, city: place, org } }, await siteUrl());
-  if (!res.ok) return fail(res.error);
-  return { sent: true, email, link: res.link };
+  const userId = await createAccount({ name: fields.your_name, email, password, phone, city: place, org });
+  if (!userId) return { ...fail(""), error: undefined, exists: true };
+  await signIn(userId);
+  // A full page load, so the dashboard is asked for as the signed-in coordinator.
+  return { go: "/dashboard?toast=sent" };
 }

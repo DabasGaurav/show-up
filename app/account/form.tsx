@@ -21,6 +21,9 @@ export function AccountForm({ d }: { d: { name: string; phone: string; email: st
       <Field label="Email" htmlFor="email" hint="You sign in with this, so it can't be changed here"><TextInput id="email" value={d.email} readOnly disabled /></Field>
       <Field label="City" htmlFor="city"><PlaceField defaultValue={d.city} onlineLabel="I'll help online" /></Field>
       <Field label="Causes you care about" optional><ChipChecks name="causes" options={CAUSES} defaultValues={d.causes} /></Field>
+      <Field label="New password" htmlFor="password" optional hint="Leave empty to keep the one you have">
+        <TextInput id="password" name="password" type="password" autoComplete="new-password" minLength={8} />
+      </Field>
       <FormError message={state.error} />
       {state.ok && !pending && <p role="status" className="rounded-xl bg-primary-soft px-4 py-3 font-medium text-primary">Saved.</p>}
       <Button type="submit" size="tap" className="w-full" disabled={pending}>{pending ? "Saving…" : "Save changes"}</Button>

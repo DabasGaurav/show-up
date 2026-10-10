@@ -1,52 +1,85 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useEffect } from "react";
-import { CheckEmail } from "@/components/check-email";
 import { ChipChecks, Field, FormError, TextInput } from "@/components/forms/field";
 import { PlaceField } from "@/components/forms/place-field";
 import { Button } from "@/components/ui/button";
 import { CAUSES } from "@/lib/constants";
-import { signInAction, type SignInState } from "./actions";
+import { signInAction, signUpAction, type SignInState } from "./actions";
 
-/** Sign in and sign up in one form: email first, and a few details only if the person is new. */
-export function SignInForm({ next }: { next: string }) {
-  const [state, action, pending] = useActionState<SignInState, FormData>(signInAction, {});
-  // A full page load, not an in-app move: nothing cached from before sign-in is reused.
+const a = "font-semibold text-primary underline underline-offset-2";
+
+/** After signing in or up: a full page load, so nothing cached from before is reused. */
+function useGo(go: string | undefined) {
   useEffect(() => {
-    if (state.go) window.location.assign(state.go);
-  }, [state.go]);
-  if (state.go) {
-    return (
-      <p role="status" className="py-6 text-center text-lg font-semibold">
-        You&apos;re in. <a href={state.go} className="text-primary underline underline-offset-2">Carry on</a>
-      </p>
-    );
-  }
-  if (state.sent) return <CheckEmail email={state.email} link={state.link} />;
+    if (go) window.location.assign(go);
+  }, [go]);
+}
+
+function Done({ go }: { go: string }) {
+  return (
+    <p role="status" className="py-6 text-center text-lg font-semibold">
+      You&apos;re in. <a href={go} className={a}>Carry on</a>
+    </p>
+  );
+}
+
+/** Sign in: email and password. */
+export function SignInForm({ next, signUpHref }: { next: string; signUpHref: string }) {
+  const [state, action, pending] = useActionState<SignInState, FormData>(signInAction, {});
+  useGo(state.go);
+  if (state.go) return <Done go={state.go} />;
+  return (
+    <form action={action} className="space-y-4">
+      <input type="hidden" name="next" value={next} />
+      <Field label="Email" htmlFor="email">
+        <TextInput id="email" name="email" type="email" autoComplete="email" defaultValue={state.fields?.email} required />
+      </Field>
+      <Field label="Password" htmlFor="password">
+        <TextInput id="password" name="password" type="password" autoComplete="current-password" required />
+      </Field>
+      <FormError message={state.error} />
+      {state.hint === "new" && (
+        <p role="alert" className="rounded-xl bg-accent-soft px-4 py-3 font-medium">
+          No account with that email yet. <Link href={signUpHref} className={a}>Create one</Link>
+        </p>
+      )}
+      <Button type="submit" size="tap" className="h-14 w-full text-lg" disabled={pending}>{pending ? "One moment…" : "Sign in"}</Button>
+      <p className="text-center text-sm text-ink-soft">Forgot your password? <Link href="/contact" className={a}>Write to us</Link></p>
+    </form>
+  );
+}
+
+/** Sign up to volunteer: no email to wait for. */
+export function SignUpForm({ next, signInHref }: { next: string; signInHref: string }) {
+  const [state, action, pending] = useActionState<SignInState, FormData>(signUpAction, {});
+  useGo(state.go);
+  if (state.go) return <Done go={state.go} />;
   const f = state.fields ?? {};
   return (
     <form action={action} className="space-y-4">
       <input type="hidden" name="next" value={next} />
-      {state.isNew && <input type="hidden" name="step" value="details" />}
-      <Field label="Email" htmlFor="email" hint="We'll send your link and reminders here">
-        <TextInput id="email" name="email" type="email" autoComplete="email" defaultValue={state.email} required />
+      <Field label="Your name" htmlFor="name" hint="As NGOs will see it">
+        <TextInput id="name" name="name" autoComplete="name" defaultValue={f.name} required />
       </Field>
-      {state.isNew && (
-        <>
-          <p role="status" className="rounded-xl bg-accent-soft px-4 py-3 font-medium">You&apos;re new here. A few details and you&apos;re in.</p>
-          <Field label="Your name" htmlFor="name" hint="As NGOs will see it">
-            <TextInput id="name" name="name" autoComplete="name" defaultValue={f.name} required autoFocus />
-          </Field>
-          <Field label="City" htmlFor="city">
-            <PlaceField key={state.place ?? ""} defaultValue={state.place} onlineLabel="I'll help online" />
-          </Field>
-          <Field label="Causes you care about" optional><ChipChecks key={(state.causes ?? []).join()} name="causes" options={CAUSES} defaultValues={state.causes} /></Field>
-        </>
-      )}
+      <Field label="Email" htmlFor="email" hint="We'll send your reminders here">
+        <TextInput id="email" name="email" type="email" autoComplete="email" defaultValue={f.email} required />
+      </Field>
+      <Field label="Choose a password" htmlFor="password" hint="At least 8 characters">
+        <TextInput id="password" name="password" type="password" autoComplete="new-password" minLength={8} required />
+      </Field>
+      <Field label="City" htmlFor="city">
+        <PlaceField key={state.place ?? ""} defaultValue={state.place} onlineLabel="I'll help online" />
+      </Field>
+      <Field label="Causes you care about" optional><ChipChecks key={(state.causes ?? []).join()} name="causes" options={CAUSES} defaultValues={state.causes} /></Field>
       <FormError message={state.error} />
-      <Button type="submit" size="tap" className="h-14 w-full text-lg" disabled={pending}>
-        {pending ? "One moment…" : state.isNew ? "Create my account" : "Continue"}
-      </Button>
+      {state.hint === "existing" && (
+        <p role="alert" className="rounded-xl bg-accent-soft px-4 py-3 font-medium">
+          You already have an account. <Link href={signInHref} className={a}>Sign in</Link>
+        </p>
+      )}
+      <Button type="submit" size="tap" className="h-14 w-full text-lg" disabled={pending}>{pending ? "One moment…" : "Create my account"}</Button>
     </form>
   );
 }

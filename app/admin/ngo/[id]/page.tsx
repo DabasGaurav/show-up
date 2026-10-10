@@ -38,8 +38,11 @@ export default async function AdminNgo(props: PageProps<"/admin/ngo/[id]">) {
         <Field label="Coordinator's name" htmlFor="contact_name"><TextInput id="contact_name" name="contact_name" defaultValue={org?.contact_name ?? ""} required /></Field>
         <Field label="Their role" htmlFor="role" optional><TextInput id="role" name="role" defaultValue={role} placeholder="e.g. Founder" /></Field>
         {isNew
-          ? <Field label="Their email" htmlFor="email" hint="They sign in with a link sent here"><TextInput id="email" name="email" type="email" required /></Field>
-          : <Field label="Their email" htmlFor="email" hint="They sign in with a link sent here. Change it to hand the dashboard over."><TextInput id="email" name="email" type="email" defaultValue={owner?.email ?? ""} /></Field>}
+          ? <Field label="Their email" htmlFor="email" hint="They sign in with this"><TextInput id="email" name="email" type="email" required /></Field>
+          : <Field label="Their email" htmlFor="email" hint="They sign in with this. Change it to hand the dashboard over."><TextInput id="email" name="email" type="email" defaultValue={owner?.email ?? ""} /></Field>}
+        <Field label={isNew ? "Their password" : "New password"} htmlFor="password" optional={!isNew} hint={isNew ? "At least 8 characters. Tell them what it is; they can change it on their account page." : "Leave empty to keep the one they have"}>
+          <TextInput id="password" name="password" type="text" autoComplete="off" minLength={8} required={isNew} />
+        </Field>
         <Field label="Phone" htmlFor="phone" optional><TextInput id="phone" name="phone" type="tel" inputMode="numeric" defaultValue={local(org?.contact_phone)} /></Field>
         <Field label="WhatsApp, if different" htmlFor="whatsapp" optional><TextInput id="whatsapp" name="whatsapp" type="tel" inputMode="numeric" defaultValue={local(org?.whatsapp_phone)} /></Field>
         <Field label="How did they hear about Show-Up?" htmlFor="heard_from" optional>

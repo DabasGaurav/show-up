@@ -6,7 +6,9 @@ import { isAdmin, lockAdmin, stopViewing, unlockAdmin, viewAs } from "@/lib/auth
 import { now } from "@/lib/clock";
 import { CAUSES, HEARD_FROM } from "@/lib/constants";
 import { deleteActivity, deleteOrg, deleteSpot, ownerOf, setActivityVisible, setSpotStatus } from "@/lib/data/admin";
+import { setPassword } from "@/lib/accounts";
 import { createOrg, decideOrg } from "@/lib/data/orgs";
+import { MIN_PASSWORD } from "@/lib/password";
 import { createActivity } from "@/lib/data/tasks";
 import { query, queryOne } from "@/lib/db";
 import { istToDate, normalisePhone } from "@/lib/format";
@@ -64,6 +66,8 @@ export async function saveOrgAction(form: FormData) {
   if (!city) back(here, "Pick a city, or type the town or village.");
   if (causes.length === 0) back(here, "Pick at least one cause.");
   if (f("contact_name").length < 2) back(here, "Add the coordinator's name.");
+  if (f("password") && f("password").length < MIN_PASSWORD) back(here, `The password needs at least ${MIN_PASSWORD} characters.`);
+  if (!id && !f("password")) back(here, "Set a password for the coordinator. They sign in with it.");
   const phone = f("phone") ? normalisePhone(f("phone")) : null;
   if (f("phone") && !phone) back(here, "That phone number doesn't look right.");
   const whatsapp = f("whatsapp") ? normalisePhone(f("whatsapp")) : null;
@@ -78,6 +82,7 @@ export async function saveOrgAction(form: FormData) {
       const free = phone && !(await queryOne("select 1 as taken from users where phone = $1", [phone]));
       [user] = await query<{ id: string }>("insert into users (name, email, phone, city) values ($1, $2, $3, $4) returning id", [f("contact_name"), email, free ? phone : null, city]);
     }
+    if (f("password")) await setPassword(user!.id, f("password"));
     await createOrg(user!.id, {
       name: f("name"), city: city!, causes, contactName: f("contact_name"), contactRole: f("role"), contactPhone: phone,
       registrationNo: f("registration_no") || null, about: f("about") || null, whatsappPhone: whatsapp, heardFrom: heard, approved,
@@ -92,6 +97,7 @@ export async function saveOrgAction(form: FormData) {
     if (await queryOne("select 1 as taken from users where lower(email) = $1 and id <> $2", [newEmail, owner.id])) back(here, "That email is already on another account.");
     await query("update users set email = $2 where id = $1", [owner.id, newEmail]);
   }
+  if (owner && f("password")) await setPassword(owner.id, f("password"));
   await query(
     `update organisations set name = $2, city = $3, causes = $4, about = $5, registration_no = $6, contact_name = $7, contact_phone = $8,
        whatsapp_phone = $9, heard_from = $10 where id = $1`,
@@ -193,4 +199,13 @@ export async function messageDoneAction(form: FormData) {
   await guard();
   await query("update contact_messages set done = $2 where id = $1", [str(form.get("id")), form.get("done") === "1"]);
   revalidatePath("/admin");
+}
+
+/** Set a new password for someone who has forgotten theirs. */
+export async function setPasswordAction(form: FormData) {
+  await guard();
+  const password = String(form.get("password") ?? "");
+  if (password.length < MIN_PASSWORD) redirect(`/admin?tab=volunteers&e=${encodeURIComponent(`The password needs at least ${MIN_PASSWORD} characters.`)}`);
+  await setPassword(str(form.get("user")), password);
+  redirect("/admin?tab=volunteers&toast=saved");
 }
